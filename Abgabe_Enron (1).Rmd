@@ -1,0 +1,775 @@
+---
+title: "SNA_Abgabe_Enron"
+author: "Hosung Ryu"
+date: "2023-11-20"
+output:
+  pdf_document: default
+---
+
+# Gliederung
+
+1. Einleitung
+
+2. Analyse Strategie
+
+3. Analyse $\\$
+3.1. Vorbereitung der Daten $\\$
+3.2. Zentralitätsanalyse - Degree, Closeness, Betweness$\\$
+3.3. Gewichtsanalyse$\\$
+3.4. Clustering
+
+4. Fazit
+
+5. Ausblick
+
+
+
+# 1. Einleitung 
+Diese Soziale-Netzwerk-Analyse untersucht die Kommunikationsstruktur des Enron-Skandals. Hierfür kommt der Datensatz "Enron" aus der igraphdata zum Einsatz, der die E-Mail-Kommunikation zwischen unterschiedlichen Beteiligten innerhalb der Enron Corporation abbildet. 
+
+Im ersten Kapitel liegt der Fokus auf der Netzwerkstruktur und dem Datensatzaufbau, um ein tiefes Verständnis für die Datenstruktur zu entwickeln. Das zweite Kapitel beinhaltet die Entwicklung und der umfassenden Analysestrategie. Im dritten Kapitel wurden die Datensätze vorbereitet: unnötige Informationen entfernt, umfassende Datenreinigung durchgeführt und E-Mail-Verbindungen nach Inhalt aufgeteilt. Diese bilden die Grundlage für die dreistufige Analyse: Zentralitätsanalyse (Degree, Closeness, Betweenness), Gewichtsanalyse und Clusteridentifikation mittels Louvain-Algorithmus. Das vierte Kapitel fasst die Ergebnisse zusammen und betont Schlüsselerkenntnisse. Im abschließenden fünften Kapitel werden Ausblicke und mögliche Verbesserungen für zukünftige Analysen skizziert. Diese umfassende soziale Netzwerkanalyse des Enron-E-Mail-Datensatzes verspricht tiefe Einblicke in die Kommunikationsstruktur eines der prominentesten Unternehmensskandale.
+
+
+# Forschungsfrage
+Das übergeordnete Ziel dieser Analyse besteht darin, herausragende Persönlichkeiten im Netzwerk zu erkennen und ihre spezifische Rolle innerhalb der Kommunikationsstruktur zu durchdringen. Im Fokus steht dabei die Identifikation von Schlüsselpersonen, die aufgrund ihrer Positionen oder Interaktionen maßgeblichen Einfluss auf das Gesamtnetzwerk ausüben könnten. 
+
+
+# Untersuchen der Daten
+```{r message=FALSE, warning=FALSE}
+# Für die Analyse werden die benötigten Bibliotheken sowie der Datensatz 'Enron' importiert
+library(igraph)
+library(igraphdata)
+library(ggplot2)
+library(dplyr)
+data(enron)
+
+# Prüft, ob der Enron-Datensatz als gerichteter Graph vorliegt
+is.directed(enron)
+# Prüft, ob den Kanten des Graphen Gewichtungen zugeordnet sind
+is.weighted(enron)
+
+
+# Zeigt eine Zusammenfassung der Eigenschaften des Objekts an
+summary(enron)
+# Gibt die Anzahl der Knoten im Graphen enron an
+vcount(enron)
+# Gibt die Anzahl der Kanten im Graphen enron an 
+ecount(enron)
+
+
+# Aufzählung der vorhandenen Attributen und Namen der Attributen von den Knoten
+#vertex.attributes(enron) 
+vertex_attr_names(enron)
+
+# Aufzählung der vorhandenen Attributen und Namen der Attributen von den Kanten
+#edge.attributes(enron)
+edge_attr_names(enron)
+
+```
+
+Der Enron-Datensatz repräsentiert einen gerichteten, jedoch ungewichteten Graphen, der 184 individuelle E-Mail-Adressen und 125,409 E-Mail-Verbindungen umfasst. Dies ermöglicht eine umfassende Betrachtung der Interaktionen innerhalb des Unternehmens.
+
+Die Akteuren, also die Knoten, sind durch verschiedene Merkmale charakterisiert, darunter 'Email' für ihre E-Mail-Adressen, 'Name' für echte Namen und 'Note' für ihre Positionen bei Enron.
+
+Die Verbindungen zwischen den Teilnehmern, repräsentiert durch die Kanten, werden durch spezifische Attribute bestimmt: 'Time' für den Zeitpunkt des E-Mail-Versands, 'Reciptype' für die Art des Empfängers, 'Topic' für die thematische Zuordnung basierend auf 3-Means-Clustering, sowie 'LDC_topic', basierend auf Michael W. Berry's "Annotated (by Topic) Enron Email Data Set". 
+
+\newpage
+# Netzwerk abbilden
+```{r fig.height=8, fig.width=8, warning=FALSE}
+plot(enron)
+```
+
+Der Datensatz wird zunächst visualisiert. Die Darstellung ist jedoch unübersichtlich, daher sind Anpassungen erforderlich, um unwichtige Elemente zu entfernen und die Netzwerkabbildung zu verbessern.
+
+\newpage
+# 2. Analysestrategie 
+Im folgenden Schritt wird eine umfassende Datenbereinigung durchgeführt, um eine detaillierte Analyse zu ermöglichen. Im Anschluss daran wird eine Zentralitätsanalyse durchgeführt, um die zentralen Akteure im Netzwerk zu identifizieren. Hierbei werden verschiedene Aspekte wie der Grad, die Nähe und die Zwischenzentralität berücksichtigt, um ein umfassendes Bild über die Bedeutung einzelner Knoten im gesamten Netzwerk zu erhalten. Zusätzlich wird eine Gewichtsanalyse durchgeführt, bei der die Anzahl der Kanten zwischen denselben Knoten als Gewicht betrachtet wird. Dieser Ansatz ermöglicht die Einschätzung der Intensität der Kommunikation zwischen spezifischen Akteuren.Abschließend wird der Louvain-Algorithmus für das Clustering angewendet, um die Knoten in Gruppen zu unterteilen. Dieser Schritt hat das Ziel, natürliche Cluster oder Gemeinschaften innerhalb des Netzwerks zu identifizieren und somit die Struktur sowie Organisation des Enron-Netzwerks genauer zu verstehen.
+
+
+# 3 Analyse
+In diesem Abschnitt wird die umfassende Analyse gemäß der zuvor festgelegten Analysestrategie durchgeführt. Das Ziel ist es, detaillierte Einblicke in die Struktur des Enron-Netzwerks zu gewinnen.
+
+# 3.1 Vorbereitung der Daten
+Die Datenmanipulation stellt den Initialschritt der Analyse dar. Hierbei werden gezielte Maßnahmen ergriffen, um den Datensatz optimal vorzubereiten. Dies beinhaltet die Bereinigung von Einträgen mit fehlerhaften Zeitangaben sowie die Gruppierung nach Themenzuordnungen. Ziel dieser Maßnahmen ist es, eine solide Grundlage für die folgenden Analysen zu schaffen.
+
+# Bereinigung der Daten
+```{r fig.height=15, fig.width=15, warning=FALSE}
+enron_cleaned <- enron %>%
+  # Entfernt Einträge mit Jahr 1979 im "Time"-Attribut
+  delete_edges(edges = 
+     E(enron)[substr(as.character(edge_attr(enron, "Time")), 1, 4) == "1979"]) %>%
+  # Entfernt Einträge mit LDC_topic-Wert 0, -1 oder NA
+  delete_edges(edges = 
+    E(.)[is.na(edge_attr(., "LDC_topic")) | edge_attr(., "LDC_topic") %in% c(0,-1)])
+
+# Überprüft die aktualisierten Kantenattribute
+# print(head(sort(edge_attr(enron_cleaned, "Time")), 10))
+# print(sort(unique(edge_attr(enron_cleaned, "LDC_topic"))))
+
+# Überprüft die Häufigkeiten der Werte in der "LDC_topic"-Spalte
+# table(enron %>% edge_attr(., "LDC_topic"))
+# table(enron_cleaned %>% edge_attr(., "LDC_topic"))
+ 
+# Entfernt überflüssigen oder isolierten Knoten sowie Loops, also Verbindungen,
+# die mit sich selbst verbunden sind
+enron_cleaned <- simplify(enron_cleaned, remove.multiple = FALSE, remove.loops = TRUE)
+isolated_vertices <- V(enron_cleaned)[degree(enron_cleaned, mode = "all") == 0]
+enron_cleaned <- delete_vertices(enron_cleaned, as.numeric(isolated_vertices))
+
+# Netzwerk abbilden
+plot(enron_cleaned, 
+     vertex.size = 3,
+     vertex.label = NA, 
+     edge.arrow.size = 0.5,
+     edge.width = 0.5)
+vcount(enron_cleaned)
+ecount(enron_cleaned)
+
+```
+
+In diesem Zusammenhang erfolgt zunächst die Eliminierung von Einträgen, bei denen das "Time"-Attribut das Jahr 1979 aufweist, da diese gemäß der Quelle als fehlerhaft erachtet wurden. Des Weiteren werden Einträge mit den LDC_topic-Werten 0, -1 oder NA entfernt. Zusätzlich werden isolierte Vertices sowie Schleifenkanten ausgeschlossen, da sie für die Analyse als nicht relevant betrachtet werden.
+
+Nun sind noch 178 Knoten (vertices) und 28.686 Kanten (edges) übrig, die näher betrachtet werden können.
+
+# Gruppierung der Kanten nach dem Kantenattribute "LDC_topic"
+```{r}
+# graph.attributes(enron)
+
+# Energiekrise in Kalifornien: 1-8
+enron_calif <- delete_edges(enron_cleaned, 
+                  E(enron_cleaned)[!(edge_attr(enron_cleaned, "LDC_topic") %in% 1:8)])
+# Für eine verbesserte Netzwerkabbildung werden isolierte Knoten entfernt, 
+# da sie als irrelevant betrachtet werden.
+enron_calif <- delete.vertices(enron_calif, which(degree(enron_calif) == 0))
+
+#Tägliche Geschäftsaktivitäten: 9
+enron_daily <- delete_edges(enron_cleaned, 
+                E(enron_cleaned)[!(edge_attr(enron_cleaned, "LDC_topic") %in% c(9))])
+enron_daily <- delete.vertices(enron_daily, which(degree(enron_daily) == 0))
+
+#Untergang und Bedenken der Mitarbeiter: 16-17
+enron_downfall <- delete_edges(enron_cleaned, 
+                   E(enron_cleaned)[!(edge_attr(enron_cleaned, "LDC_topic") %in% c(16, 17))])
+enron_downfall <- delete.vertices(enron_downfall, which(degree(enron_downfall) == 0))
+
+#Breitbanddienste (EBS): 18
+enron_broad <- delete_edges(enron_cleaned, 
+                E(enron_cleaned)[!(edge_attr(enron_cleaned, "LDC_topic") %in% c(18))])
+enron_broad <- delete.vertices(enron_broad, which(degree(enron_broad) == 0))
+
+#Geschäftsaktivitäten in Indien: 23-24
+enron_india <- delete_edges(enron_cleaned, 
+                E(enron_cleaned)[!(edge_attr(enron_cleaned, "LDC_topic") %in% c(23, 24))])
+enron_india <- delete.vertices(enron_india, which(degree(enron_india) == 0))
+```
+
+Es erfolgt eine Gruppierung nach Themen ("LDC_topics"). Kanten mit den LDC_topic-Werten 1-8 behandeln E-Mails, die sich mit der Energiekrise in Kalifornien und den Aktivitäten der Enron Corporation auseinandersetzen. Der Wert 9 steht für alltägliche Aktivitäten eines multinationalen Energieunternehmens, darunter Handel mit Aktien, Organisation von Meetings, Bestätigungen von Meetings und allgemeine Ankündigungen der Personalabteilung. Die Werte 16 und 17 repräsentieren Artikel über den Untergang von Enron sowie Nachrichten von besorgten Mitarbeitern. Der Wert 18 bezieht sich auf Enron Broadband Services (EBS), das gescheiterte Breitbandunternehmen von Enron. Die Werte 23-24 behandeln allgemeine Informationen über Energiefragen in Indien sowie spezifische Verweise auf die Dabhol Power Company (DPC), das Maharastra State Electricity Board (MSEB) und die indische Provinz Maharastra.
+
+Aufgrund des begrenzten Umfangs der Analyse erfolgt vorerst eine Aufteilung in 5 Gruppen. Bei Bedarf können daraus später 32 individuelle Datensätze erstellt werden.
+
+
+
+\newpage
+# Netzwerkabildung der Gruppierungen
+```{r, fig.width=15, fig.height=15}
+plot(enron_calif, vertex.size = 3, vertex.label = NA, edge.arrow.size = 0.5,
+     edge.width = 1, layout = layout.auto)
+title(main = "Enron - Energiekrise in Kalifornien")
+```
+
+\newpage
+```{r, fig.width=15, fig.height=15}
+plot(enron_daily, vertex.size = 3, vertex.label = NA, edge.arrow.size = 0.5,
+     edge.width = 1, layout = layout.auto)
+title(main = "Enron - Tägliche Geschäftsaktivitäten")
+```
+
+\newpage
+```{r, fig.width=15, fig.height=15}
+plot(enron_downfall, vertex.size = 3, vertex.label = NA, edge.arrow.size = 0.5,
+     edge.width = 1, layout = layout.auto)
+title(main = "Enron - Untergang und Bedenken der Mitarbeiter")
+```
+
+\newpage
+```{r, fig.width=15, fig.height=15}
+plot(enron_broad, vertex.size = 3, vertex.label = NA, edge.arrow.size = 0.5,
+     edge.width = 1, layout = layout.auto)
+title(main = "Enron - Breitbanddienste (EBS)")
+```
+
+\newpage
+```{r, fig.width=15, fig.height=15}
+plot(enron_india, vertex.size = 3, vertex.label = NA, edge.arrow.size = 0.5,
+     edge.width = 1, layout = layout.auto)
+title(main = "Enron - Geschäftsaktivitäten in Indien")
+```
+
+
+\newpage
+# 3.2. Zentralitätsanalyse - Degree, Closeness, Betweness
+Im Rahmen dieser Analyse werden verschiedene Zentralitätsmaße wie Grad, Nähe und Zwischenzentralität angewendet. Dieser Schritt ermöglicht die Identifikation von Schlüsselakteuren im Netzwerk, die aufgrund ihrer zentralen Positionen besondere Bedeutung haben
+
+# Funktion zur Berechnung der zentralen Maße
+```{r warning=FALSE}
+calculate_centralities <- function(graph) {
+  # Degree Centrality
+  degree_centrality <- degree(graph, mode = "all")
+
+  # Closeness Centrality
+  closeness_centrality <- closeness(graph, mode = "all")
+
+  # Betweenness Centrality
+  betweenness_centrality <- betweenness(graph, directed = TRUE, normalized = TRUE)
+
+  # Ränge berechnen
+  degree_rank <- rank(-degree_centrality)
+  closeness_rank <- rank(-closeness_centrality)
+  betweenness_rank <- rank(-betweenness_centrality)
+
+  # Gesamtrang berechnen
+  total_rank <- rowSums(cbind(degree_rank, closeness_rank, betweenness_rank))
+
+  # Ergebnisse in einem Dataframe speichern
+  centralities_df <- data.frame(
+    Total_Rank = total_rank,
+    Email = V(graph)$Email,
+    Position = V(graph)$Note,
+    Degree_Centrality = degree_centrality,
+    Closeness_Centrality = closeness_centrality,
+    Betweenness_Centrality = betweenness_centrality,
+    Degree_Rank = degree_rank,
+    Closeness_Rank = closeness_rank,
+    Betweenness_Rank = betweenness_rank
+  )
+  # Nach Total_Rank sortieren
+  centralities_df <- centralities_df[order(centralities_df$Total_Rank), ]
+  
+    return(centralities_df)
+}
+# Zentralitäten für jeden Graphen berechnen
+centralities_enron <- calculate_centralities(enron_cleaned)
+centralities_calif <- calculate_centralities(enron_calif)
+centralities_daily <- calculate_centralities(enron_daily)
+centralities_downfall <- calculate_centralities(enron_downfall)
+centralities_broad <- calculate_centralities(enron_broad)
+centralities_india <- calculate_centralities(enron_india)
+```
+
+In der Funktion calculate_centralities werden für einen gegebenen gerichteten Graphen verschiedene Zentralitätsmetriken wie Grad, Closeness und Betweenness berechnet. Die Ergebnisse werden in einem Dataframe gespeichert und nach einem Gesamtrang sortiert. Anschließend werden die Zentralitätsmetriken für verschiedene Graphen, darunter Enron in verschiedenen Kontexten, berechnet und in separaten Dataframes gespeichert.
+
+# Enron-Datensatz (Allgemein)
+```{r warning=FALSE}
+head(centralities_enron, 10)
+```
+\newpage
+# Energiekrise in Kalifornien
+```{r warning=FALSE}
+head(centralities_calif,10)
+```
+\newpage
+# Tägliche Geschäftsaktivitäten
+```{r warning=FALSE}
+head(centralities_daily, 10)
+```
+\newpage
+# Untergang und Bedenken der Mitarbeiter
+```{r warning=FALSE}
+head(centralities_downfall, 10)
+```
+\newpage
+# Breitbanddienste (EBS)
+```{r warning=FALSE}
+head(centralities_broad, 10)
+```
+\newpage
+# Geschäftsaktivitäten in Indien
+```{r warning=FALSE}
+head(centralities_india, 10)
+```
+\newpage
+In der Analyse der verschiedenen Enron-Datensätze zeichnen sich bestimmte Schlüsselfiguren mit bedeutenden Positionen ab, die auf ihre Relevanz im Netzwerk hinweisen.
+
+Enron-Datensatz (Allgemein) - John Lavoreto, CEO, Enron America: 
+Die bedeutende Position als CEO von Enron America legt nahe, dass John Lavoreto eine zentrale Rolle in den allgemeinen Netzwerkaktivitäten von Enron spielt. Als CEO könnte er eine entscheidende Rolle bei strategischen Entscheidungen und der Kommunikation innerhalb des Unternehmens spielen.
+
+Energiekrise in Kalifornien - Jeff Dasovich, Employee, Government Relation Executive: 
+Jeff Dasovich als "Government Relation Executive" während der kalifornischen Energiekrise legt nahe, dass er eine Schlüsselrolle in den Beziehungen zwischen Enron und der Regierung in dieser kritischen Zeit innehatte. Seine Position deutet darauf hin, dass er in Verhandlungen und Kommunikation mit staatlichen Stellen involviert war.
+
+Tägliche Geschäftsaktivitäten - John Lavoreto, CEO, Enron America: 
+Die erneute Erscheinung von John Lavoreto als bedeutende Figur in den täglichen Geschäftsaktivitäten unterstreicht seine zentrale Rolle im allgemeinen Unternehmensnetzwerk. Als CEO dürfte er maßgeblich an den täglichen Abläufen und Entscheidungen beteiligt gewesen sein.
+
+Untergang und Bedenken der Mitarbeiter - Louise Kitchen, President, Enron Online: 
+Die Position als Präsidentin von Enron Online macht Louise Kitchen zu einer bedeutenden Figur, möglicherweise aufgrund ihrer Einflussnahme auf die Online-Aktivitäten von Enron.
+
+Breitbanddienste (EBS) - Tracy Geaccone, Employee, Assistant: 
+Die Position als Assistentin in Verbindung mit den Broadband Services könnte darauf hinweisen, dass Tracy Geaccone eine wichtige Rolle bei der Unterstützung und Koordination von Aktivitäten im Zusammenhang mit Breitbanddiensten gespielt hat.
+
+Geschäftsaktivitäten in Indien - John Lavoreto, CEO, Enron America: 
+John Lavoreto als CEO von Enron America könnte auf seine maßgebliche Rolle bei Geschäftsaktivitäten und Interaktionen von Enron in Indien hinweisen. Als CEO könnte er an Entscheidungen und Verhandlungen beteiligt gewesen sein, die die Aktivitäten des Unternehmens in Indien betreffen.
+
+Die fortwährende Präsenz von John Lavoreto, James Steffes und Richard Shapiro in verschiedenen Datensätzen deutet darauf hin, dass diese Schlüsselpersonen über verschiedene Phasen von Enrons Geschichte hinweg zentrale Rollen im Netzwerk spielten. John Lavoreto fungierte als CEO von Enron America, während James Steffes und Richard Shapiro im Bereich Regulatory and Government Affairs tätig waren. Diese Positionen weisen auf ihre potenziellen Verantwortlichkeiten und Einflüsse im Unternehmen hin.
+
+Insbesondere die wiederholte Nennung von James Steffes und Richard Shapiro in verschiedenen Datensätzen lässt darauf schließen, dass ihre Rolle in den Bereichen Regulierung und Regierungsangelegenheiten eine bedeutende und kontinuierliche Beteiligung an geschäftskritischen Entscheidungen und Verhandlungen innerhalb des Enron-Netzwerks reflektiert. Dies unterstreicht die strategische Bedeutung dieser Akteure, was die beobachteten Ergebnisse der Zentralitätsanalysen weiter unterstützen könnte.
+\newpage
+# Funktion für die Netzwerkabbildung 
+```{r}
+plot_top_vertices <- function(graph, centralities_df) {
+  # Wählt die Top-5-vertices basierend auf Total_Rank aus
+  top_vertices <- head(centralities_df, 5)
+
+  # Definiert Farben für die Top-5-vertices
+  top_vertex_colors <- c("#FF0000", "#FFA500", "#0000FF", "#00FF00", "#800080")
+
+  # Ordnet die Farben den Top-5-vertices zu
+  vertex_color_mapping <- setNames(top_vertex_colors, top_vertices$Email)
+
+  # Fügt ein Farbattribut für die Top-vertices hinzu
+  V(graph)$color <- ifelse(V(graph)$Email %in% names(vertex_color_mapping),
+                           vertex_color_mapping[V(graph)$Email], "grey")
+
+  # Fügt ein Größenattribut für die Top-vertices hinzu
+  V(graph)$size <- ifelse(V(graph)$Email %in% names(vertex_color_mapping), 6, 3)
+
+  # Vereinfachet den Graphen, um doppelte Verbindungen zu entfernen
+  simplified_graph <- simplify(graph, remove.loops = TRUE, remove.multiple = TRUE)
+
+  # Plotet den Graphen
+  plot(
+    simplified_graph,
+    edge.arrow.size = 0.5,
+    vertex.size = V(graph)$size,
+    vertex.label = NA,
+    vertex.color = V(graph)$color,
+    layout = layout.auto,
+  )
+
+ # Legende hinzufügen
+  legend("bottom", legend = paste(top_vertices$Email, 
+                      top_vertices$Position, sep = " "), fill = top_vertex_colors)
+}
+```
+
+Die Funktion plot_top_vertices erstellt einen Graphen basierend auf einem gegebenen Netzwerk (graph) und hebt die Top-5-Knoten hervor, die anhand ihrer Ränge in den Zentralitätsmetriken ausgewählt werden. Die Top-Knoten werden farblich markiert und in einer Legende unterhalb des Graphen angezeigt.
+
+\newpage
+# Netzwerk Abbilden
+```{r,fig.width=15, fig.height=15}
+plot_top_vertices(enron_cleaned, centralities_enron)
+title(main = "Enron-Datensatz (Allgemein)")
+```
+
+\newpage
+```{r,fig.width=15, fig.height=15}
+plot_top_vertices(enron_calif, centralities_calif)
+title(main = "Enron - Energiekrise in Kalifornien")
+```
+
+\newpage
+```{r,fig.width=15, fig.height=15}
+plot_top_vertices(enron_daily, centralities_daily)
+title(main = "Enron - Tägliche Geschäftsaktivitäten")
+```
+
+\newpage
+```{r,fig.width=15, fig.height=15}
+plot_top_vertices(enron_downfall, centralities_downfall)
+title(main = "Enron - Untergang und Bedenken der Mitarbeiter")
+```
+
+\newpage
+```{r,fig.width=15, fig.height=15}
+plot_top_vertices(enron_broad, centralities_broad)
+title(main = "Enron - Breitbanddienste (EBS)")
+```
+
+\newpage
+```{r,fig.width=15, fig.height=15}
+plot_top_vertices(enron_india, centralities_india)
+title(main = "Enron - Geschäftsaktivitäten in Indien")
+```
+
+
+
+
+\newpage
+# Verteilungen der Degree,Closeness und Betweness- Centrality
+```{r warning=FALSE}
+# Daten für die Netzwerkabbildung zusammenführen
+all_data <- rbind(
+  mutate(centralities_calif, Graph = "California Energy \nCrisis"),
+  mutate(centralities_daily, Graph = "Daily Business"),
+  mutate(centralities_downfall, Graph = "Downfall"),
+  mutate(centralities_broad, Graph = "Enron Broadband"),
+  mutate(centralities_india, Graph = "Enron Scandal\nin India")
+)
+
+# Scatterplot für Degree Centrality mit logarithmischer y-Achse
+ggplot(all_data, aes(x = Graph, y = Degree_Centrality, color = Graph)) +
+  geom_jitter(position = position_jitter(0.2), alpha = 0.7) +
+  stat_summary(fun = median, geom = "point", shape = 20, size = 4,
+               color = "black", position = position_dodge(0.2)) +
+  stat_summary(fun = mean, geom = "point", shape = 18, size = 4, 
+               color = "red", position = position_dodge(0.2)) +
+  labs(title = "Scatterplot of Degree Centrality (log scale)", x = "Graph", y = "Degree Centrality") +
+  scale_y_log10()
+```
+
+\newpage
+```{r warning=FALSE}
+# Scatterplot für Closeness Centrality mit logarithmischer y-Achse
+ggplot(all_data, aes(x = Graph, y = Closeness_Centrality, color = Graph)) +
+  geom_jitter(position = position_jitter(0.2), alpha = 0.7) +
+  stat_summary(fun = median, geom = "point", shape = 20, size = 4, 
+               color = "black", position = position_dodge(0.2)) +
+  stat_summary(fun = mean, geom = "point", shape = 18, size = 4, 
+               color = "red", position = position_dodge(0.2)) +
+  labs(title = "Scatterplot of Closeness Centrality (log scale)",
+       x = "Graph", y = "Closeness Centrality") +
+  scale_y_log10()
+```
+
+\newpage
+```{r warning=FALSE}
+# Scatterplot für Betweenness Centrality mit logarithmische3 r y-Achse
+ggplot(all_data, aes(x = Graph, y = Betweenness_Centrality, color = Graph)) +
+  geom_jitter(position = position_jitter(0.2), alpha = 0.7) +
+  stat_summary(fun = median, geom = "point", shape = 20, size = 4, 
+               color = "black", position = position_dodge(0.2)) +
+  stat_summary(fun = mean, geom = "point", shape = 18, size = 4, 
+               color = "red", position = position_dodge(0.2)) +
+  labs(title = "Scatterplot of Betweenness Centrality (log scale)",
+       x = "Graph", y = "Betweenness Centrality") +
+  scale_y_log10()
+```
+
+Die Scatterplots zeigen die Verteilungen der Zentralitätsmetriken (Degree, Closeness, Betweenness) für verschiedene Graphen, darunter Enron in verschiedenen Kontexten. Die Punktwolken geben die einzelnen Akteure in den Netzwerken wieder, wobei Median (schwarze Punkte) und Durchschnitt (rote Punkte) hervorgehoben sind. Die y-Achse ist logarithmisch skaliert, um die Unterschiede in den Zentralitätsmaßen besser darzustellen.
+
+Auffällig ist, dass in kleineren Netzwerken tendenziell höhere Werte für Closeness und Betweenness Centrality zu beobachten sind, während die Degree Centrality kleiner ist. Dies könnte darauf hinweisen, dass in kleineren Netzwerken die Akteure generell näher miteinander verbunden sind und stärker voneinander abhängen, was zu höheren Werten in diesen beiden Metriken führt.
+
+
+
+
+
+\newpage
+# 3.3 Gewichtsanalyse
+Die Gewichtsanalyse konzentriert sich auf die Bewertung der Intensität von Verbindungen zwischen Akteuren. Hierbei werden die Anzahl der Kanten zwischen denselben Knoten als Gewicht betrachtet, um bedeutende Kommunikationswege herauszuarbeiten.
+
+# Funktion für die Erstellung der gewichtete Netzwerkabbildung
+```{r}
+create_weighted_graph <- function(graph) {
+  # Extrahiert die Edge-Liste aus dem igraph-Objekt
+  edge_list_df <- as.data.frame(get.edgelist(graph))
+
+  # Fügt eine Spalte 'weight' hinzu und setzt sie auf 1
+  edge_list_df$weight <- 1
+
+  # Gruppiert nach 'V1' und 'V2' und zählt die Anzahl der Zeilen in jeder Gruppe
+  edge_list_df$weight <- ave(edge_list_df$weight, edge_list_df$V1, edge_list_df$V2, FUN = length)
+
+  # Entfernt die Duplikate
+  edge_list_df <- edge_list_df[!duplicated(edge_list_df[, c('V1', 'V2')]), ]
+
+  # Erstellt ein igraph-Objekt aus der Edge-Liste
+  graph_weight <- graph_from_data_frame(edge_list_df, directed = TRUE)
+
+  
+  # Extrahiert die Vertex-Attribute von enron_calif
+  vertex_attributes <- data.frame(
+  Email = V(graph)$Email,
+  Name = V(graph)$Name,
+  Note = V(graph)$Note
+)
+
+  # Fügt die Vertex-Attribute zu graph_weight hinzu
+  V(graph_weight)$Email <- vertex_attributes$Email
+  V(graph_weight)$Name <- vertex_attributes$Name
+  V(graph_weight)$Note <- vertex_attributes$Note
+
+  # Löscht das Attribut $name aus dem igraph-Objekt
+  graph_weight <- delete_vertex_attr(graph_weight, "name")
+
+  return(graph_weight)
+}
+# Verwendung der Funktion mit dem enron_calif-Graphen
+enron_weighted <- create_weighted_graph(enron_cleaned)
+calif_weighted <- create_weighted_graph(enron_calif)
+daily_weighted <- create_weighted_graph(enron_daily)
+downfall_weighted <- create_weighted_graph(enron_downfall)
+broad_weighted <- create_weighted_graph(enron_broad)
+india_weighted <- create_weighted_graph(enron_india)
+
+```
+
+Hier werden gewichtete Graphen erstellt, wobei die ursprünglichen LDC-Themen in fünf grobe Kategorien aufgeteilt wurden. Die Gewichtung der Kanten basiert nun auf der Häufigkeit der Verbindungen zwischen den Akteuren, und jedes Gewicht repräsentiert eine eindeutige Verbindung. Diese Herangehensweise erleichtert die Analyse im Vergleich zu einer vorherigen Gewichtung basierend auf den LDC-Themen und unterscheidet sich von den Degree Centralities.
+
+
+# Funktion für die Ausgabe der Top 10 Kanten und ihrer zugehörigen Knoten
+```{r, fig.width=15, fig.height=15}
+get_top_edges_data <- function(weighted_graph) {
+  
+  # Extrahiert die Edgeliste aus dem igraph-Objekt
+  edgelist <- as.data.frame(get.edgelist(weighted_graph))
+  
+  # Fügt eine Spalte 'weight' zur Edgelist hinzu
+  weights <- E(weighted_graph)$weight
+  edgelist$weight <- weights
+
+  # Sortiert die Edgelist nach den Gewichten absteigend
+  sorted_edgelist <- edgelist[order(weights, decreasing = TRUE), ]
+
+  # Extrahiert die Top 10 Kanten
+  top_edges_edgelist <- head(sorted_edgelist, 10)
+  
+  # Extrahiert die Sender- und Empfänger-Vertices
+  v1_vertices <- top_edges_edgelist$V1
+  v2_vertices <- top_edges_edgelist$V2
+
+  # Extrahiert die Attribute-Werte für die Sender- und Empfänger-Vertices
+  v1_attributes <- data.frame(
+    Sender_Email = V(weighted_graph)[v1_vertices]$Email,
+    Sender_Name = V(weighted_graph)[v1_vertices]$Name,
+    Sender_Note = V(weighted_graph)[v1_vertices]$Note
+  )
+
+  v2_attributes <- data.frame(
+    Receiver_Email = V(weighted_graph)[v2_vertices]$Email,
+    Receiver_Name = V(weighted_graph)[v2_vertices]$Name,
+    Receiver_Note = V(weighted_graph)[v2_vertices]$Note
+  )
+
+  # Extrahiert nur die Spalte 'weight' von top_edges_edgelist
+  top_edges_data <- data.frame(weight = top_edges_edgelist$weight, v1_attributes, v2_attributes)
+
+
+  # Rückgabe der kombinierten Daten
+  return(top_edges_data)
+}
+```
+
+In der Funktion get_top_edges_data wird für ein gewichtetes Netzwerk die Top-10-Kanten extrahiert, wobei die Kantengewichte berücksichtigt werden. Es werden die Sender- und Empfänger-Attribute sowie die zugehörigen Gewichte für jede Kante in einem Datenrahmen gespeichert und zurückgegeben.
+
+\newpage
+# Enron-Datensatz (Allgemein)
+```{r, fig.width=15, fig.height=15}
+top_edges_enron_data <- get_top_edges_data(enron_weighted)
+print(top_edges_enron_data)
+```
+\newpage
+# Energiekrise in Kalifornien
+```{r, fig.width=15, fig.height=15}
+top_edges_calif_data <- get_top_edges_data(calif_weighted)
+print(top_edges_calif_data)
+```
+\newpage
+# Tägliche Geschäftsaktivitäten
+```{r, fig.width=15, fig.height=15}
+top_edges_daily_data <- get_top_edges_data(daily_weighted)
+print(top_edges_daily_data)
+```
+\newpage
+# Untergang und Bedenken der Mitarbeiter
+```{r, fig.width=15, fig.height=15}
+top_edges_downfall_data <- get_top_edges_data(downfall_weighted)
+print(top_edges_downfall_data)
+```
+\newpage
+# Breitbanddienste (EBS)
+```{r, fig.width=15, fig.height=15}
+top_edges_broad_data <- get_top_edges_data(broad_weighted)
+print(top_edges_broad_data)
+```
+\newpage
+# Geschäftsaktivitäten in Indien
+```{r, fig.width=15, fig.height=15}
+top_edges_india_data <- get_top_edges_data(india_weighted)
+print(top_edges_india_data)
+```
+
+Im Enron-Datensatz wird eine bedeutende Verbindung zwischen Thomas Martin, dem Vice President, und Geir Solberg, einem Employee und Analyst, festgestellt. Diese Verbindung könnte auf eine Schlüsselrolle von Thomas Martin in der Kommunikationsstruktur hindeuten, da er als Vice President eine zentrale Position im Unternehmen innehat.
+
+Im Kontext der Energiekrise in Kalifornien zeigt die Kommunikation zwischen Andrea Ring, der Direktorin des Handels, und Mark Taylor, einem Employee, potenzielle strategische Entscheidungen oder Informationsaustausch bezüglich der Geschäftsaktivitäten von Enron während dieser Krisenzeit auf.
+
+Die Verbindung zwischen Jeffrey Shankman, dem Präsidenten von Enron Global Mkts, und Charles Weldon, einem ENA Gas Texas Associate, im Zusammenhang mit den täglichen Geschäftsaktivitäten könnte auf die operative Steuerung und Koordination zwischen verschiedenen Hierarchieebenen hinweisen.
+
+Darrell Schoolcraft, ein Mitarbeiter von Enron Transportation Services, der Bedenken an Danny McCarty, dem Vice President, äußert, gibt Einblicke in die Kommunikation von Mitarbeitern auf unterschiedlichen Ebenen und könnte auf mögliche Herausforderungen oder Probleme im Unternehmen hinweisen.
+
+Die Verbindung zwischen David Delainey, dem CEO von Enron North America und Enron Energy Services, und Eric Bass, einem Trader, im Kontext von Breitbanddiensten (EBS) könnte auf strategische Entscheidungen oder Geschäftsentwicklungen im Bereich der Breitbanddienste hinweisen.
+
+Die Geschäftsaktivitäten in Indien, repräsentiert durch die Verbindung zwischen Brenda Whitehead und James Steffes, einem Vice President für Government Affairs, könnten auf die Bedeutung von James Steffes' Rolle bei regulatorischen Angelegenheiten und Geschäftsbeziehungen in Indien hinweisen.
+
+Diese Verbindungen werden als relevant betrachtet, da sie Einblicke in die hierarchische Struktur, Entscheidungsprozesse und fachliche Beziehungen innerhalb des Enron-Netzwerks bieten.
+
+
+# Funktion für die Netzwerkabbildung mit der Kantendicke basierend auf dem Gewicht (edge width)
+```{r, fig.width=15, fig.height=15}
+plot_scaled_edges <- function(weighted_graph) {
+  # Normiert die Gewichte auf den Bereich [0, 1]
+  normalized_weights <- scale(E(weighted_graph)$weight)
+
+  # Skaliert die normalisierten Werte auf den Bereich [1, 25]
+  scaled_weights <- 1 + 24 * (normalized_weights - min(normalized_weights)) /
+                           (max(normalized_weights) - min(normalized_weights))
+
+  # Extrahiert die Top-5-Kanten
+  top_edges <- head(order(scaled_weights, decreasing = TRUE), 5)
+
+  # Erstellt einen Vektor mit den Farben für jede Kante
+  edge_colors <- rep("grey", length.out = length(E(weighted_graph)))
+  edge_colors[top_edges] <- c("#FF0000", "#FFA500", "#0000FF", "#00FF00", "#800080")
+
+  # Sortieret die Kanten basierend auf der Farbe
+  sorted_edges <- get.edgelist(weighted_graph)[order(edge_colors, decreasing = TRUE), ]
+
+  # Erstellt einen neuen Graphen mit den sortierten Kanten
+  g_sorted <- graph_from_edgelist(sorted_edges, directed = TRUE)
+
+  # Füget die Farben zum sortierten Graphen hinzu
+  E(g_sorted)$color <- edge_colors[order(edge_colors, decreasing = TRUE)]
+
+  # Plotet den skalierten Kantenbreiten und markierten Top-5-Kanten
+  plot(
+    g_sorted,
+    vertex.size = 3,
+    vertex.label = NA,
+    edge.arrow.size = 0.2,
+    edge.width = scaled_weights[order(edge_colors, decreasing = TRUE)], 
+    edge.color = E(g_sorted)$color, 
+    layout = layout.auto
+  )
+
+# Legende hinzufügen
+top_edges_data <- get_top_edges_data(weighted_graph)
+legend("topright", legend = paste(
+  head(top_edges_data$weight, 5),
+  " ", head(top_edges_data$Sender_Email, 5),
+  " ", head(top_edges_data$Receiver_Email, 5)
+), fill = c("#FF0000", "#FFA500", "#0000FF", "#00FF00", "#800080"))
+
+}
+```
+
+Die Funktion `plot_scaled_edges` visualisiert einen gewichteten Graphen mit skalierten Kantenbreiten, wobei die Gewichte der Kanten auf den Bereich [1, 25] transformiert werden. Die Top-5-Kanten werden farblich hervorgehoben, und eine Legende zeigt die Gewichte sowie die beteiligten Sender- und Empfänger-Emails für diese Kanten an.
+
+\newpage
+# Netzwerk abbilden
+```{r, fig.width=15, fig.height=15}
+plot_scaled_edges(enron_weighted)
+title(main = "Enron-Datensatz (Allgemein)")
+```
+\newpage
+```{r, fig.width=15, fig.height=15}
+plot_scaled_edges(calif_weighted)
+title(main = "Enron - Energiekrise in Kalifornien")
+```
+\newpage
+```{r, fig.width=15, fig.height=15}
+plot_scaled_edges(daily_weighted)
+title(main = "Enron - Tägliche Geschäftsaktivitäten")
+```
+\newpage
+```{r, fig.width=15, fig.height=15}
+plot_scaled_edges(downfall_weighted)
+title(main = "Enron - Untergang und Bedenken der Mitarbeiter")
+```
+\newpage
+```{r, fig.width=15, fig.height=15}
+plot_scaled_edges(broad_weighted)
+title(main = "Enron - Breitbanddienste (EBS)")
+```
+\newpage
+```{r, fig.width=15, fig.height=15}
+plot_scaled_edges(india_weighted)
+title(main = "Enron - Geschäftsaktivitäten in Indien")
+```
+
+\newpage
+# 3.4 Clustering 
+Die Clustering-Analyse befasst sich mit der Gruppierung von Knoten im Netzwerk. Hierbei wird der Louvain-Algorithmus angewendet, um natürliche Cluster oder Gemeinschaften zu identifizieren. Dies ermöglicht eine differenzierte Betrachtung von Untergruppen innerhalb des Gesamtnetzwerks.
+
+# Funktion zur Netzwerkabbildung eines Graphen mit Cluster-Färbung
+```{r}
+plot_clustered_graph <- function(graph) {
+
+  # Ungerichteten Graphen erstellen
+  undirected_graph <- as.undirected(graph, mode = "collapse")
+
+  # Louvain-Algorithmus auf dem ungerichteten Graphen durchführen
+  cluster <- cluster_louvain(undirected_graph)
+
+  # Weise den Cluster-Zugehörigkeiten den Vertex-Attributen zu
+  V(graph)$community <- membership(cluster)
+  
+  # Plot mit den Cluster-Farben
+  plot(
+    undirected_graph,
+    #edge.width = scaled_weights,
+    edge.arrow.size = 0.5,
+    vertex.size = 3,
+    vertex.label = NA,
+    vertex.color = V(graph)$community + 1,  # Farben entsprechend den Cluster-Zugehörigkeiten
+    vertex.frame.color = "transparent", 
+    layout = layout.auto,
+  )
+}
+
+```
+
+Die Funktion plot_clustered_graph erstellt eine Netzwerkabbildung eines Graphen unter Verwendung des Louvain-Algorithmus, der die Gemeinschaftsstruktur des Graphen ermittelt. Die Knoten werden in Farben eingefärbt, die den verschiedenen Gemeinschaften entsprechen, und der resultierende Graph wird visualisiert. Diese Funktion wird dann für jeden gewichteten Graphen im Enron-Datensatz angewendet, um die Gemeinschaftsstruktur in jedem Netzwerk darzustellen.
+
+
+\newpage
+# Netzwerk abbilden
+```{r, fig.width=15, fig.height=15}
+plot_clustered_graph(enron_cleaned)
+title(main = "Enron-Datensatz (Allgemein)")
+```
+\newpage
+```{r, fig.width=15, fig.height=15}
+plot_clustered_graph(enron_calif)
+title(main = "Enron - Energiekrise in Kalifornien")
+```
+\newpage
+```{r, fig.width=15, fig.height=15}
+plot_clustered_graph(enron_daily)
+title(main = "Enron - Tägliche Geschäftsaktivitäten")
+```
+\newpage
+```{r, fig.width=15, fig.height=15}
+plot_clustered_graph(enron_downfall)
+title(main = "Enron - Untergang und Bedenken der Mitarbeiter")
+```
+\newpage
+```{r, fig.width=15, fig.height=15}
+plot_clustered_graph(enron_broad)
+title(main = "Enron - Breitbanddienste (EBS)")
+```
+\newpage
+```{r, fig.width=15, fig.height=15}
+plot_clustered_graph(enron_india)
+title(main = "Enron - Geschäftsaktivitäten in Indien")
+```
+
+
+\newpage
+# 4 Fazit
+Die Analyse der Enron-Datensätze hebt herausragende Schlüsselfiguren mit bedeutenden Positionen hervor, insbesondere John Lavoreto, der als CEO von Enron America eine zentrale Rolle in den allgemeinen Netzwerkaktivitäten des Unternehmens zu spielen scheint. Seine kontinuierliche Präsenz in verschiedenen Datensätzen, zusammen mit James Steffes und Richard Shapiro, lässt auf ihre bedeutende und kontinuierliche Beteiligung an geschäftskritischen Entscheidungen und Verhandlungen innerhalb des Enron-Netzwerks schließen. Diese wiederholte Nennung unterstreicht die strategische Bedeutung dieser Persönlichkeiten und unterstützt die Ergebnisse der Zentralitätsanalysen.
+
+Die Verbindungen zu anderen Akteuren wie Jeff Dasovich, Louise Kitchen, Tracy Geaccone und Thomas Martin bieten darüber hinaus Einblicke in verschiedene Geschäftsbereiche und die hierarchischen Strukturen innerhalb von Enron. Jeff Dasovichs Rolle als "Government Relation Executive" während der Energiekrise in Kalifornien lässt auf seine zentrale Position in den Beziehungen zwischen Enron und der Regierung schließen. Louise Kitchens Position als Präsidentin von Enron Online deutet auf ihre potenzielle Einflussnahme auf die Online-Aktivitäten des Unternehmens hin.
+
+Die Analyse hat somit das übergeordnete Ziel erreicht, Schlüsselpersonen zu identifizieren, die durch ihre Positionen oder Interaktionen einen maßgeblichen Einfluss auf das Gesamtnetzwerk ausüben könnten. Die vielfältigen Kontexte, von der Energiekrise in Kalifornien bis zu täglichen Geschäftsaktivitäten und Breitbanddiensten, bieten Einblicke in strategische Entscheidungen und operative Koordination. Die Forschungsfrage nach der Identifikation herausragender Persönlichkeiten im Netzwerk und ihrer spezifischen Rolle innerhalb der Kommunikationsstruktur wird durch die Analyse umfassend beantwortet, indem relevante Akteure und ihre potenziellen Einflüsse herausgearbeitet werden.
+
+
+# 5 Ausblick
+In Bezug auf den Enron-Datensatz konnte erfolgreich ein Cluster gebildet werden, was auf natürliche Gemeinschaften und Strukturen im Netzwerk hinweist. Allerdings gestaltet sich eine tiefere Analyse schwierig, da das Attribut "Note" nicht ausreichend detaillierte Informationen enthält. Um eine präzisere Charakterisierung der Cluster und ihrer Bedeutung vorzunehmen, wäre eine Erweiterung der verfügbaren Informationen, insbesondere im Hinblick auf die individuellen Rollen und Verantwortlichkeiten der Akteure, von Vorteil.
+
+Ein vielversprechender Ausblick für eine weiterführende Analyse besteht darin, eine interaktive Visualisierung zu implementieren. Hierdurch könnten verschiedene Aspekte des Netzwerks in einer zeitlichen Entwicklung nachverfolgt werden. Durch die Integration von Hover-Funktionen könnten zudem zusätzliche Informationen zu den einzelnen Akteuren und Verbindungen abgerufen werden. Diese interaktiven Elemente ermöglichen es, tiefer in die zeitliche Dynamik und die spezifischen Interaktionen innerhalb des Enron-Netzwerks einzutauchen.
+
+Eine weiterführende Untersuchung könnte auch darauf abzielen, externe Datenquellen zu integrieren, um eine umfassendere Kontextualisierung der Kommunikationsstrukturen zu ermöglichen. Dies könnte beispielsweise durch die Einbindung von Unternehmensdaten, Organigrammen oder externen Ereignissen erfolgen. Durch solche Erweiterungen könnte die Analyse nicht nur detaillierter, sondern auch aussagekräftiger werden, da sie eine umfassendere Sicht auf die Netzwerkdynamik von Enron ermöglicht.
+
+
+
+
+
+
+

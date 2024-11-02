@@ -1,0 +1,472 @@
+---
+title: "Your Title"
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Installieren von Abhänigkeiten
+# install.packages("igraph")
+# install.packages("igraphdata")
+
+library(igraph)
+library(igraphdata)
+```
+
+# Gliederung
+1. Einleitung und Forschungsfrage
+2. Analysestrategie
+3. Analyse
+  3.1 Degree-Centrality
+  3.2 Betweenness-Centrality
+  3.3 Closeness-Centrality
+4. Conclusion
+5. Anhang
+
+# 1. Einleitung und Forschungsfrage
+Die Folgende Arbeit führte eine Analyse des sozialen Netzwerkes der Fakultät einer Britischen Universität durch. 
+Dazu wird der igraphdata-Datensatz "UKfaculty" verwendet, welcher die Beziehungen einer Gruppe von Studierenden gewichtet und gerichtet enthält.
+```{r}
+# Daten laden
+data("UKfaculty")
+```
+
+## Daten untersuchen
+```{r}
+# Gesamtdaten
+class(UKfaculty)
+# View(UKfaculty)             # Dieser Befehl führt zu Problemen beim knitten und ist daher auskommentiert
+
+# Netzwerk roh abbilden
+plot(UKfaculty)
+# Netzwerk vereinfacht und entzerrt abbilden
+plot(UKfaculty, vertex.size = 4, vertex.label = NA, edge.arrow.size = 0.2, edge.width = 0.5)
+
+summary(UKfaculty)
+# Ergebnis: 81 Vertices (Personen) und 817 Edges (Verbindungen)
+V(UKfaculty)$Group
+E(UKfaculty)$weight
+
+```
+Im aufgezeichneten Netzwerk der Universität befinden sich 81 Personen (Vertices), welche durch 817 Verbindungen (Edges) miteinander verbunden sind.
+Durch die hohe Anzahl an Verbindungen lässt sich aus der ersten Darstellung des Netzwerkes nur wenig erkennen.
+Die 81 Personen sind in 4 Gruppen (1-4) eingeteilt, deren wissenschaftlicher Hintergrund sich jedoch nicht identifizieren lässt. 
+Es ist zu vermuten, dass es sich dabei um einzelne Fakultäten handelt. Im Folgenden werden die einzelnen Gruppen genauer untersucht.
+
+## Edges untersuchen - Gruppen
+```{r}
+# Untersuchen der einzelnen Gruppen:
+
+# Gruppe 1:
+UKfaculty_group1 <- delete_vertices(UKfaculty, V(UKfaculty)[Group != 1])
+plot(UKfaculty_group1, vertex.size = 8, edge.arrow.size = 0.2, edge.width = 0.5)
+summary(UKfaculty_group1)
+
+# Gruppe 2:
+UKfaculty_group2 <- delete_vertices(UKfaculty, V(UKfaculty)[Group != 2])
+plot(UKfaculty_group2, vertex.size = 8, edge.arrow.size = 0.2, edge.width = 0.5)
+summary(UKfaculty_group2)
+
+# Gruppe 3:
+UKfaculty_group3 <- delete_vertices(UKfaculty, V(UKfaculty)[Group != 3])
+plot(UKfaculty_group3, vertex.size = 8, edge.arrow.size = 0.2, edge.width = 0.5)
+summary(UKfaculty_group3)
+
+# Gruppe 4:
+UKfaculty_group4 <- delete_vertices(UKfaculty, V(UKfaculty)[Group != 4])
+plot(UKfaculty_group4, vertex.size = 8, edge.arrow.size = 0.2, edge.width = 0.5)
+summary(UKfaculty_group4)
+
+```
+Auffällig bei der Untersuchung der Gruppen sind die unterschiedliche Gruppengrößen. Während Gruppe 1 mit 33 Mitglieder die größte Gruppe darstellt, 
+enthält Gruppe 4 nur 2 Mitglieder. Auch die Verbindungsdichte, die Anzahl der Verbindungen innerhalb der Gruppen, unterscheidet sich stark.
+
+Übersichtliche Zusammenfassung der Ergebnisse:
+  - Gruppe 1: 33 Edges / 317 Vertices
+  - Gruppe 2: 25 Edges / 250 Vertices
+  - Gruppe 3: 19 Edges / 96 Vertices
+  - Gruppe 4: 2 Edges / 2 Vertices
+
+
+## Edges untersuchen - Gewichtung
+```{r}
+edges_weight <- (E(UKfaculty)$weight)
+class(edges_weight)
+edges_weight
+
+# Vorhandene Gewichtungen mit Häufigkeit
+as.data.frame(table(edges_weight))
+
+# Gesamgewichtung
+sum(edges_weight)
+
+# durchschnittliche Gewichtung (Durchschnitt)
+mean(edges_weight)
+
+# durchschnittliche Gewichtung (Median)
+median(edges_weight)
+
+
+# Plot für bestimmte Gewichtung
+UKfaculty_min5 <- delete_edges(UKfaculty, E(UKfaculty)[weight <= 5])
+plot(UKfaculty_min5, vertex.size = 8, edge.arrow.size = 0.2, edge.width = 0.5)
+
+```
+Die Beziehungen der einzelnen Studierenden sind unterschiedlich gewichtet, wodurch die Häufigkeit oder Intensität der einzelnen Beziehungen dargestellt wird.
+Bei einer Untersuchung der Gewichtungen lässt sich festellen, dass die am häufigsten vorkommende Gewichtung 1 und 2 ist. 
+Insgesamt lassen sich viele niedrige Gewichtungen erkennen, wobei die durchschnittliche Gewichtung bei 4,57 liegt.
+
+## Forschungsfrage
+Im Folgenden wird untersucht, welche Person die größte Wichtigkeit für das soziale Netwerk der Universität darstellt. 
+Die Forschungsfrage lautet: "Wer ist am wichtigsten für den Zusammenhalt in der Gruppe".
+
+# 2. Analysestrategie
+Um die Forschungsfrage ausfürhlich zu beantworten, werden verschiedene Analysestrategien angewendet, welche am Ende zusammengeführt werden.
+Die Teilnehmenden des Netzwerks werden auf drei Verschiedene Arten auf ihre Wichtigkeit respektive Zentralität und Stellung im Netzwerk untersucht. 
+Zuerst wird dazu die Degree-Centrality - die Anzahl der Kontake - jeder Person untersucht. Danach wird die Closeness und letzlich die Betweenness errechnet. 
+Für jeden dieser untersuchten Parameter wird ein Rang von 1-81 innerhalb des Netzwerks vergeben, wodurch am Ende durch das aufsummieren der einzelnen Ränge ein Gesamt-Rang ermittelt werden kann.
+Die Person mit dem niedrigsten Gesamt-Rang wird als am wichtigsten für das Netzwerk angenommen.
+
+
+# 3. Analyse
+In diesem Kapitel wird das Netzwerk auf die einzelnen Parameter untersucht. 
+Dabei wird jeweils ein Scatterplot erstellt, in welchem die gesamte Verteilung der Werte erkennbar ist. 
+Zusätzlich wird eine sortierte Tabelle der Ergebnisse abgebildet, in welche die exakten Werte der Parameter nachzulesen sind.
+
+## 3.1 Wer hat am meisten Kontakte (Degree-Centrality)?
+```{r}
+# Identifizierungs-Name der Vertices/Personen
+personId <- c(as_ids(V(UKfaculty)))
+class(personId)
+
+# Zugehörigkeit zu Gruppe
+personGroup <- c(V(UKfaculty)$Group)
+class(personGroup)
+# Anzahl der Kontakte
+personDegree <- c(degree(UKfaculty))
+class(personDegree)
+
+# Zusammenfassung in Dataframe
+personDegree_df <- data.frame(name = personId, group = personGroup, degree = personDegree)
+personDegree_df
+
+# Darstellen der Daten in Scatterplot für Anzahl der Kontakte je Person
+plot(personDegree_df$name, personDegree_df$degree, 
+  xlab = "Personen-ID", 
+  ylab = "Degree", 
+  main = "Darstellung der Anzahl der Kontake (Degree Centrality)", 
+  pch = 3, 
+  col = "blue", 
+  cex.axis = 1.5, 
+  cex.main = 1.5, 
+  cex = 2)
+
+# Sortieren nach Anzahl der Kontakte
+personDegree_df_sorted <- personDegree_df[order(personDegree_df$degree, decreasing = TRUE),]
+
+# Ausgabe der 10 Personen mit den meisten Kontakten
+head(personDegree_df_sorted, 10)
+```
+Aus dem Scatterplot lässt sich erkennen, dass sich Person 29 und 37 besonders von den übrigen abheben. 
+Eine tiefergehende Untersuchung dieser Tatsache muss in einer weiteren Untersuchung des Netzwerkes erfolgen.
+
+
+## 3.2 Wer hat die größte Betweenness?
+```{r}
+# Identifizierungs-Name der Vertices/Personen
+personId <- c(as_ids(V(UKfaculty)))
+class(personId)
+
+# Zugehörigkeit zu Gruppe
+personGroup <- c(V(UKfaculty)$Group)
+class(personGroup)
+
+# Betweenness
+personBetweenness <- round(c(betweenness(UKfaculty)), 2)
+
+# Zusammenfassung in Dataframe
+personBetweenness_df <- data.frame(name = personId, group = personGroup, betweenness = personBetweenness)
+personBetweenness_df
+
+# Darstellen der Daten in Scatterplot für Betweenness je Person 
+plot(personBetweenness_df$name, personBetweenness_df$betweenness, 
+  xlab = "Personen-ID", 
+  ylab = "Betweenness", 
+  main = "Darstellung der Betweenness", 
+  pch = 3, 
+  col = "blue", 
+  cex.axis = 1.5, 
+  cex.main = 1.5, 
+  cex = 2)
+
+# Sortieren nach Betweenness
+personBetweenness_df_sorted <- personBetweenness_df[order(personBetweenness_df$betweenness, decreasing = TRUE),]
+personBetweenness_df_sorted
+
+# Ausgabe der 10 Personen mit den meisten Kontakten
+head(personBetweenness_df_sorted, 10)
+
+# Ausgabe der 10 Personen mit den wenigsten Kontakten
+tail(personBetweenness_df_sorted, 10)
+```
+Eine Betrachtung des Scatterplots zeigt eine hohes Vorkommen niedriger Werte und nur wenige setzen sich davon ab. Es besteht eine hohe Varianz der Werte.
+Hier ist eine detailliertere Untersuchung der Gegebenheiten in einer weiterführenden Untersuchung des Netzwerkes zu empfehlen.
+
+## 3.3 Wer hat die größte Closeness?
+```{r}
+# Identifizierungs-Name der Vertices/Personen
+personId <- c(as_ids(V(UKfaculty)))
+
+# Zugehörigkeit zu Gruppe
+personGroup <- c(V(UKfaculty)$Group)
+
+# Closeness
+personCloseness <- c(closeness(UKfaculty))
+
+# Zusammenfassung in Dataframe
+personCloseness_df <- data.frame(name = personId, group = personGroup, closeness = personCloseness)
+personCloseness_df
+
+# Darstellen der Daten in Scatterplot für Closeness je Person
+plot(personCloseness_df$name, personCloseness_df$closeness, 
+  xlab = "Personen-ID", 
+  ylab = "Closeness", 
+  main = "Darstellung der Closeness", 
+  pch = 3, 
+  col = "blue", 
+  cex.axis = 1.5, 
+  cex.main = 1.5, 
+  cex = 2)
+
+# Sortieren nach Closeness
+personCloseness_df_sorted <- personCloseness_df[order(personCloseness_df$closeness, decreasing = TRUE),]
+personCloseness_df_sorted
+
+# Ausgabe der 10 Personen mit der höchsten Closeness
+head(personCloseness_df_sorted, 10)
+
+# Ausgabe der 10 Personen mit der niedrigsten Closeness
+tail(personCloseness_df_sorted, 10)
+```
+Neben der vermältnismäßig mittleren Varianz der Werte und einer häufung der Werte zwischen 0.002 und 0.004, die sich im Scatterplot gut erkennen lässt, 
+ist auch eine Person mit einem nicht vorhandenen Closeness-Wert zu erkennen. 
+Auch dies muss in einer weitergehenden Untersuchung genauer betrachtet werden.
+
+# 4. Conclusion
+```{r}	
+# Einführen eines Rangs für die 3 Kriterien als übergreifende Bewertung
+personID <- c(as_ids(V(UKfaculty)))
+
+# Degree:
+personDegree_df_sorted$degreeRank <- 1:nrow(personDegree_df_sorted)
+personDegree_df_sorted
+
+# Betweenness:
+personBetweenness_df_sorted$betweennessRank <- 1:nrow(personBetweenness_df_sorted)
+personBetweenness_df_sorted
+
+# Closeness:
+personCloseness_df_sorted$closenessRank <- 1:nrow(personCloseness_df_sorted)
+personCloseness_df_sorted
+
+# Dataframe mit allen Rängen
+combinedRank_df <- data.frame(name=personID)
+
+combinedRank_df$degreeRank <- personDegree_df_sorted$degreeRank[match(combinedRank_df$name, personDegree_df_sorted$name)]
+combinedRank_df$betweennessRank <- personBetweenness_df_sorted$betweennessRank[match(combinedRank_df$name, personBetweenness_df_sorted$name)]
+combinedRank_df$closenessRank <- personCloseness_df_sorted$closenessRank[match(combinedRank_df$name, personCloseness_df_sorted$name)]
+
+# Aufsummieren der Ränge
+combinedRank_df$sumRank <- combinedRank_df$degreeRank + combinedRank_df$betweennessRank + combinedRank_df$closenessRank
+combinedRank_df
+
+# Darstellen der Daten in Scatterplot für Gesamt-Rang je Person
+plot(combinedRank_df$name, combinedRank_df$sumRank, 
+  xlab = "Personen-ID", 
+  ylab = "Gesamtrang", 
+  main = "Darstellung des Gesamtrangs", 
+  pch = 3, 
+  col = "blue", 
+  cex.axis = 1.5, 
+  cex.main = 1.5, 
+  cex = 2)
+
+# Sortieren nach Gesamt-Rang
+combinedRank_df_sorted <- combinedRank_df[order(combinedRank_df$sumRank, decreasing = FALSE),]
+combinedRank_df_sorted
+
+# Spalten bennnen
+colnames(combinedRank_df_sorted)[1] <- "Personen-ID"
+colnames(combinedRank_df_sorted)[2] <- "Degree-Rang"
+colnames(combinedRank_df_sorted)[3] <- "Betweenness-Rang"
+colnames(combinedRank_df_sorted)[4] <- "Closeness-Rang"
+colnames(combinedRank_df_sorted)[5] <- "Gesamt-Rang"
+
+# Spalten sortieren
+combinedRank_df_sorted <- combinedRank_df_sorted[, c(1, 5, 2, 3, 4)]
+
+# Ausgabe des ganzen Dataframes
+combinedRank_df_sorted
+
+# Ausgabe der 10 Personen mit dem niedrigsten Gesamtrang
+head(combinedRank_df_sorted, 10)
+
+# Ausgabe der 10 Personen mit dem höchsten Gesamtrang
+tail(combinedRank_df_sorted, 10)
+```
+Wie sich erkennen lässt, haben die Personen 37 und 62 mit 7 und Person 29 mit 8 den niedrigsten Gesamt-Rang.
+Da die Gesamt-Ränge sehr nah beieinanderliegen, ist es schwierig die zu anfangs aufgestellte Forschungsfrage eindeutig zu beantweorten. 
+Im Rahmen dieser Arbeit lässt sich sagen, dass alle drei Personen (37, 62, 29) eine sehr wichtige Rolle in der Netzwerkstruktur spielen.
+
+In einer abschließenden Darstellung des Netzwerkes werden die erarbeiteten Ergebnisse noch einmal ganzheitlich dargestellt. 
+Dazu werden die drei wichtigsten Personen und ihre Beziehungen zu anderen Kontakten des Netzwerkes farblich markiert. 
+Außerdem wird durch die Größe der einzelnen Knoten, der Rang der jeweiligen Person dargestellt. Je größer der Knoten, desto besser der Rang.
+Um eine lineare Verteilung der des Gesamt-Rangs zu ermöglichen, der auch dargestellt werden kann, wurde zur Berechnung des Ranges die Funktion "(-1/39)*(V(UKfaculty_result)$rank)+(268/29)" verwendet. 
+Diese hat für den niedrigsten Rang (7) den Wert 9 und für den höchsten Rang (234) den Wert 3, sodass jeder Knoten noch gut sichtbar dargestellt werden kann.
+
+# Darstellen der Ergebnisse
+```{r}
+UKfaculty_result <- UKfaculty
+
+# Gesamt-Rang hinzufügen
+V(UKfaculty_result)$rank <- c(combinedRank_df$sumRank)
+V(UKfaculty_result)$rank
+
+# Farben hinzufügen
+V(UKfaculty_result)$color <- "#8a888882"
+V(UKfaculty_result)$color
+
+# Farben für die Top-3 Personen
+V(UKfaculty_result)$color[match("37", personID)] <- "orange"
+V(UKfaculty_result)$color[match("62", personID)] <- "darkgreen"
+V(UKfaculty_result)$color[match("29", personID)] <- "blue"
+
+# Einfärben der Edges mit den Farben der Vertices#0a0a#04790a
+edge.start <- ends(UKfaculty_result, es=E(UKfaculty_result), names=F)[,1]
+edge.col <- V(UKfaculty_result)$color[edge.start]
+
+# Darstellung
+plot(UKfaculty_result, 
+  vertex.size = (-1/39)*(V(UKfaculty_result)$rank)+(268/29),
+  vertex.label = NA,
+  layout = (layout_with_lgl(UKfaculty_result))*2.5,
+  edge.color=edge.col,
+  edge.arrow.size = 0.2, 
+  edge.width = E(UKfaculty_result)$weight/3.5,)
+
+# Hinzufügen einer Legende
+legend("bottomleft", 
+  legend = c("Person 37 [Rang 7]", "Person 62 [Rang 7]", "Person 29 [Rang 8]", "Restliche Personen"), 
+  fill = c("orange", "darkgreen", "blue", "#8a888882"), 
+  box.lty = 0,
+  bty = "n", 
+  cex = 0.6)
+```
+
+## Ausblick
+Bereits im vorangegangenen Abschnitt wurden Auffälligkeiten festgestellt, für deren untersuchung in dieser Arbeit keine Zeit mehr zur Verfügung stand.
+Es empfiehlt sich, diese in einer weiteren Betrachtung des Netzwerkes detaillierter zu untersuchen.
+Außerdem ist es möglich, weitere Parameter zur Wichtigkeit von Personen innerhalb eines Netzwerkes zu untersuchen.
+
+Weitere Untersuchungen die während der Analyse des Netzwerkes aufgekommen sind, betreffe die detaillierte Untersuchung einzelner Personen. 
+Hierzu ist im Anhang eine beispielhafte untersuchung der drei Personen mit dem besten Gesamt-Rang zu finden. 
+Auch eine Untersuchung der Personen mit dem schlechtesten Gesamt-Rang ist möglich.
+Eine weitere beispielhafte Untersuchung, welche sich im Anhang wiederfinden lässt, beschäftigt sich mit der Analyse der Einzelnen Untersuchungs-Parameter pro Gruppe.
+Es ist möglich, die Parameter für die einzelnen Gruppen zu vergleichen, um so Rückschlüsse auf Untergruppen und deren Vergleich zueinander treffen zu können.
+So scheint beispielsweise die Frage, ob Personen einer Untergruppen häufiger zentrale Positonen innerhalb des gesamten Netzwerkes einnehmen, sehr interessant.
+
+Die Betrachtung des Netzwerkes mit Hilfe von Clustering-Methoden kann ebenfalls neue Erkenntnisse über das Netzwerk liefern. 
+Besonders vielversprechend erscheint ein Vergleich der Ergebnisse der Clustering-Methoden mit den durch den Datensatz definierten Gruppen der Personen.
+
+# 5. Anhang
+## Untersuchen der 3 Personen mit dem besten Rang
+```{r}
+# Erneute Ausgabe der 3 Personen mit dem besten Rang
+head(combinedRank_df_sorted, 3)
+
+plot(UKfaculty_result, 
+  edge.width=(E(UKfaculty_result)$weight)/3, 
+  vertex.size=8,
+  edge.arrow.size = 0.0,
+  edge.color=edge.col,
+  vertex.label.color="black",
+  vertex.label.cex=0.5,
+  layout=layout_as_star(UKfaculty_result, center=V(UKfaculty_result)[37]))
+
+plot(UKfaculty_result, 
+  edge.width=(E(UKfaculty_result)$weight)/3, 
+  vertex.size=8,
+  edge.arrow.size = 0.0,
+  edge.color=edge.col,
+  vertex.label.color="black",
+  vertex.label.cex=0.5,
+  layout=layout_as_star(UKfaculty_result, center=V(UKfaculty_result)[62]))
+
+plot(UKfaculty_result, 
+  edge.width=(E(UKfaculty_result)$weight)/3, 
+  vertex.size=8,
+  edge.arrow.size = 0.0,
+  edge.color=edge.col,
+  vertex.label.color="black",
+  vertex.label.cex=0.5,
+  layout=layout_as_star(UKfaculty_result, center=V(UKfaculty_result)[29]))
+```
+
+## Untersuchen der Gruppen auf Degree-Centrality
+```{r}
+# Gesamte Anzahl der Kontakte je Gruppe
+totalGroupDegree <- aggregate(personDegree_df$degree, by = list(personDegree_df$group), FUN = sum)
+# totalGroupDegree
+
+# Verhältnis der Kontakte je Gruppe in Prozent gerundet
+totalGroupDegree$percent <- round(totalGroupDegree$x / sum(totalGroupDegree$x) * 100, 2)
+
+# Anzahl der Personen je Gruppe in dataframe
+groupCount <- c(table(personDegree_df$group))
+groupCount_df <- data.frame(group = c(1,2,3,4), count = groupCount)
+# groupCount_df
+totalGroupDegree$members <- groupCount_df$count
+
+# Durchschnittliche Anzahl der Kontakte je Gruppe
+totalGroupDegree$avgDegree <- round(totalGroupDegree$x / totalGroupDegree$members, 2)
+
+# Spalten bennnen
+colnames(totalGroupDegree)[1] <- "Gruppe"
+colnames(totalGroupDegree)[2] <- "#Kontakte"
+colnames(totalGroupDegree)[3] <- "Verteilung [%]"
+colnames(totalGroupDegree)[4] <- "#Mitglieder"
+colnames(totalGroupDegree)[5] <- "⌀Kontakte [%]"
+
+# Spalten sortieren
+totalGroupDegree <- totalGroupDegree[, c(1, 4, 2, 5, 3)]
+
+# Ausgabe
+totalGroupDegree
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

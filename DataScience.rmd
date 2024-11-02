@@ -1,0 +1,489 @@
+---
+title: "Das Berufsbild des Data Scienctisten aufgeschlüsselt"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    fig_caption: true
+    fig_height: 5
+    fig_width: 12
+    keep_tex: true
+    latex_engine: xelatex
+always_allow_html: true
+---
+
+# Einleitung
+
+## Requirements
+Zunächst müssen die benötigten Bibliotheken installiert werden:
+```{r}
+#install.packages("tidyverse")
+#install.packages("igraph")
+#install.packages("visNetwork")
+#install.packages("dplyr")
+#install.packages("tidyr")
+```
+
+```{r setup, message=FALSE, warning=FALSE}
+# Bibliotheken laden
+library(tidyverse)
+library(igraph)
+library(visNetwork)
+library(dplyr)
+library(tidyr)
+```
+
+
+## Motivation und Zielsetzung
+In ihrem Artikel "Data Scientist: The Sexiest Job of the 21st Century"
+betonen Davenport und Patil, dass Data Scientists durch ihre Fähigkeiten in Informatik, 
+Statistik und ihr Fachwissen allgemein einen erheblichen Mehrwert für Unternehmen schaffen.^[Davenport, Patil 2012]
+Die Fähigkeit, aus komplexen, unstrukturierten Daten wertvolle Erkenntnisse zu gewinnen, 
+macht Data Scientists in vielen Branchen zu einer unverzichtbaren Ressource.^[Davenport, Patil 2012]
+Die Nutzung ihrer Kompetenzen verschafft Unternehmen einen Wettbewerbsvorteil, 
+da sie datengetriebene Entscheidungen, Produktinnovationen und Effizienzsteigerungen ermöglicht.^[Davenport, Patil 2012]
+
+Darüber ob Data Scientists immer noch the "Sexiest Job" des 21. Jahrhunderts sind, lässt sich streiten.
+Fakt ist jedoch, dass die Nachfrage nach Data Scientists in den letzten Jahren stark gestiegen ist und 
+vorraussichtlich immer weiter steigen wird. 
+Dieser Trend ist auch in den Google-Suchanfragen zu den Begriffen erkenntlich:^[Google Trends, abgerufen am 30.10.2024]
+```{r, include=FALSE} 
+
+# Read the CSV file, skipping the first row
+data <- read_csv("data/GOOGLE_SEARCH_DATA.CSV", skip = 1)
+
+# Clean the data: Convert "<1" to 0.5 for plotting purposes
+data <- data %>%
+  mutate(`data science` = ifelse(`data science` == "<1", 0.5, as.numeric(`data science`)),
+         `data scientist` = ifelse(`data scientist` == "<1", 0.5, as.numeric(`data scientist`)))
+
+# Convert the 'Monat' column to Date type
+data$Monat <- as.Date(paste0(data$Monat, "-01"))
+```
+```{r, fig.width=12, fig.height=6}
+
+ggplot(data, aes(x = Monat)) +
+  geom_line(aes(y = `data science`, color = "data science")) +
+  geom_line(aes(y = `data scientist`, color = "data scientist")) +
+  labs(title = "Google Suchtrend für 'data science' und 'data scientist'",
+       x = "Datum",
+       y = "Interesse",
+       color = "Suchbegriff") +
+  theme_minimal()
+```
+
+Das wachsende Interesse an Data Science stellt eine große Chance für Arbeitnehmer dar. Ziel dieser Arbeit ist es
+einen Überblick über den Data-Science-Jobmarkt zu geben, um Arbeitnehmern bei der Jobsuche zu helfen und
+andererseits einen Überblick über die Gehälter und die Rolle von Geographie und Wettbewerb bei Jobangeboten und Gehältern zu geben.
+
+## Forschungsfrage
+Im Rahmen der vorliegenden Arbeit wird die folgende Forschungsfrage bearbeitet:
+
+Inwiefern beeinflusst die geografische Nähe von Unternehmen das Gehaltsniveau und die 
+Verfügbarkeit von Data-Science-Jobs? Lässt sich eine signifikante Variation der Einkommen 
+innerhalb regionaler Cluster feststellen, und wie kann diese durch Netzwerkzentralität erklärt 
+werden?
+
+Zur Beantwortung dieser Forschungsfrage soll zudem analysiert werden, inwiefern das Wettbewerbsumfeld 
+zwischen Unternehmen die Gehaltsstruktur im Bereich Data Science beeinflusst und welche Rolle zentrale 
+Unternehmen bei der Bestimmung des Gehaltsniveaus spielen.
+
+
+## Datengrundlage
+Nachdem die Daten in Python extern als Vorbereitung aufbereitet wurden, kann nun die Datengrundlage für diese Arbeit in R eingelesen werden. 
+Dabei wurde sich an https://www.kaggle.com/code/maxzeitler/data-science-job-salary-prediction-glassdoor/edit orientiert.
+
+### CSV einlesen
+```{r}
+data <- read_csv("data/Glassdoor_DataScience_Salary.csv")
+```
+
+Die vorliegende Arbeit basiert auf einem Datensatz, der von Kaggle stammt und Informationen zu Data-Science-Jobs in verschiedenen Unternehmen enthält. 
+Der Datensatz umfasst 742 Zeilen und 28 Spalten, was auf eine Anzahl von 742 verschiedenen Jobangeboten hindeutet. 
+Diese Anzahl ist kann für die Zwecke dieser Arbeit als ausreichend zu betrachten, auch wenn eine höhere Zahl an Beobachtungen möglicherweise zu präziseren Schlussfolgerungen geführt hätte.
+
+Der Datensatz beruht auf Daten, die von Glassdoor extrahiert wurden, eine für Stellenanzeigen und Unternehmensbewertung bekannte Website, und bietet 
+detaillierte Informationen über Data-Science-Jobs sowie deren Gehälter. Der Datensatz beinhaltet wesentliche Informationen, darunter Jobtitel, 
+geschätzte Gehälter, Stellenbeschreibungen, Unternehmensbewertungen sowie relevante Unternehmensdaten wie Standort, Größe und Branche. 
+Eine detaillierte Beschreibung dieser Daten erfolgt im späteren Verlauf. 
+Der Datensatz eignet sich in besonderem Maße für den Zweck dieser Arbeit, aber auch für Analysen des Arbeitsmarktes, beispielsweise 
+zur Untersuchung von Gehaltstrends oder zur Identifizierung der am besten bewerteten Unternehmen. 
+
+Der Datensatz umfasst konkret die folgenden Spalten:
+
+### Erste Ansicht der Daten
+```{r}
+head(data, 5)
+spec(data)
+summary(data)
+```
+Im Folgenden wird eine Übersicht der wesentlichen Spalten präsentiert:
+
+- `Job Title`: Die Berufsbezeichnung, sie gibt Aufschluss über die Tätigkeit.
+- `Salary Estimate`: Die geschätzte Gehalt, in tausend Dollar pro Jahr. Es basiert auf dem Durchschnitt von dem minimalen und maximalen Gehalt.
+- `Job Description`, `Job_simp`: Die Beschreibung der Stelle, die Aufgaben und Anforderungen enthält. Auch die vereinfachte Version der Berufsbezeichnung.
+- `Rating`: Die Bewertung des Unternehmens, sie weist eine Spannbreite von 1 bis 5 auf, wobei die Bewertung "-1" bei jeder Spalte für fehlende Bewertungen steht.
+- `Company Name`, `Location`, `Headquarters`, `Size`, `Founded`: Unternehmensbezogene Daten wie Name, Standort, Sitz, Größe und Gründungsjahr des Unternehmens.
+- `Type of ownership`, `Industry`, `Sector`, `Revenue`: Weitere Unternehmensmerkmale, diese umfassen die Eigentumsart, die Branche, den Sektor sowie die Einnahmen.
+- `Competitors`: Die Wettbewerber des Unternehmens, die im Zusammenhang dieser Arbeit von besonderer Bedeutung sind.
+- Skills (`Python_yn`, `R Studio`, `Spark`, `AWS_yn`, `Excel_yn`): Spalten, aus denen hervorgeht, ob die betreffende Kompetenz in der Stellenbeschreibung verlangt wird (0 = nein, 1 = ja).
+- `Min_salary`, `Max_salary`: Minimale und maximale Gehaltsschätzungen.
+- `State`, `Same State`, `job_state`, `Age`, `desc_len`, `Num_comp`: Zusätzliche Informationen wie Standort der Stelle, Alter des Unternehmens, Länge der Stellenbeschreibung und Anzahl der Mitbewerber.
+
+Es zeigt sich, dass eine Vielzahl von Spalten für die vorliegende Untersuchung irrelevant ist. 
+Infolgedessen werden in einem späteren Teil der Arbeit irrelevante Spalten, wie beispielsweise die Kenntnisse in Python, R Studio, Spark und ähnlichen Programmen, welche ursprünglich aus der Jobbeschreibung extrahiert wurden, entfernt.
+
+Nachdem die Daten in Python mit Hilfe von Pandas bereinigt, ergänzt und bearbeitet wurden, können sie nun in R eingelesen werden. 
+Dabei wurde sich an https://www.kaggle.com/code/maxzeitler/data-science-job-salary-prediction-glassdoor/edit orientiert.
+
+Im Folgenden wird eine erste Betrachtung der Daten vorgenommen. Zu diesem Zweck werden die Jobs in Florida nach ihren jeweiligen Vergütungen geordnet und in Form eines Balkendiagramms dargestellt.
+```{r, fig.height=15, fig.width=15}
+
+# Filter data for the state of New York (NY)
+data_ny <- data %>%
+  filter(State == "NY")
+
+# Calculate average salary by job title for NY
+avg_salary_by_job_ny <- data_ny %>%
+  group_by(`Job Title`) %>%
+  summarise(Average_Salary = mean(`Salary Estimate`, na.rm = TRUE)) %>%
+  arrange(desc(Average_Salary))
+
+# Bar plot of average salary by job title for NY
+ggplot(avg_salary_by_job_ny, aes(x = reorder(`Job Title`, Average_Salary), y = Average_Salary)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(title = "Average Salary by Job Title in NY", x = "Job Title", y = "Average Salary") +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    plot.title = element_text(size = 16, face = "bold")
+  )
+```
+
+Da die Datengrundlage nicht in einem igraph-Objekt vorliegt und ungerichtet ist, 
+ist es notwendig Knoten, Kanten sowie relevante Attribute wie beispielsweise 
+Gewichtungen zu definieren, um überhaupt Netzwerkvisualisierungen in R durchführen zu können.
+Doch dazu mehr im nächsten Kapitel.
+
+
+
+# Analysestrategie
+1. Geografisches Netzwerk
+
+Das Ziel besteht in der Erstellung eines Netzwerkes, welches auf der räumlichen Nähe von Unternehmen basiert. 
+Auf diese Weise soll untersucht werden, inwiefern regional bedingte Faktoren die Gehälter beeinflussen.
+Die Bildung von Kanten erfolgt nach dem Kriterium der räumlichen Nähe. 
+Dabei werden Unternehmen, die im gleichen Ort angesiedelt sind, durch Kanten verbunden. 
+
+2. Wettbewerbsnetzwerk
+
+Die vorliegende Untersuchung zielt darauf ab, den Einfluss des Wettbewerbs auf die Gestaltung von Gehaltsstrukturen zu analysieren. 
+Dazu werden die Beziehungen zwischen konkurrierenden Unternehmen als Netzwerk dargestellt.
+Die Bildung von Kanten durch Konkurrenzen erfolgt wie folgt:
+Die in der Spalte "Competitors" gelisteten Unternehmen werden als Knoten verbunden.
+In Bezug auf die Gewichtung sind verschiedene Optionen denkbar. 
+Beispielsweise könnte die direkte Konkurrenz mit dem Wert "1" und die indirekte Konkurrenz mit dem Wert "0,5" bewertet werden. 
+Dabei würde die indirekte Konkurrenz eine Branche umfassen, in der das Unternehmen zwar nicht als direkter Konkurrent aufgeführt ist, jedoch potenziell in Konkurrenz stehen könnte.
+Im Rahmen der Netzwerkmetriken erfolgt eine Analyse der folgenden Aspekte:
+Im Rahmen der Analyse von hierarchischen Beziehungen und unterschiedlichen Zentralitäten erfolgt eine Untersuchung der Wichtigkeit eines Unternehmens im Wettbewerbsnetzwerk sowie der Gehaltshöhen in Relation zur Konkurrenz.
+
+3. Vergleich der Gehälter innerhalb der Netzwerke
+
+Im Rahmen der  Analyse werden die Gehälter innerhalb der beiden Netzwerke miteinander verglichen. 
+Ziel ist die Identifikation von Unternehmen, die zentral in einem der beiden Netzwerke liegen, und solchen, die am Rand oder isoliert sind, um festzustellen, ob die zentralen Unternehmen höhere Gehälter anbieten.
+Zur Durchführung des Gehaltsvergleichs werden Korrelationen zwischen dem Gehalt und verschiedenen Zentralitätsmaßen innerhalb der geografischen und wettbewerbsbezogenen Netzwerke herangezogen. 
+Darüber hinaus werden Cluster-Analysen durchgeführt, um Unternehmen, die geografisch und wettbewerbsbedingt vernetzt sind, miteinander zu vergleichen.
+
+4. Zusammenführung und Vergleich der Netzwerke
+
+Im Rahmen der Zusammenführung und des Vergleichs der Netzwerke erfolgt eine Gegenüberstellung der jeweiligen Strukturen, um etwaige Gemeinsamkeiten und Unterschiede zu identifizieren.
+Das Ziel dieser Untersuchung besteht in der Analyse der Interaktion beider Netzwerke sowie der Identifikation von Regionen, in denen eine besonders hohe Gehaltskonkurrenz zu beobachten ist.
+Im Rahmen des Vergleichs der Netzwerke hinsichtlich der Gehälter und des Wettbewerbs erfolgt zunächst eine Gegenüberstellung der Gehaltsverteilung in sogenannten "Hotspot-Regionen" und geografisch isolierten Regionen.
+Darüber hinaus werden gemeinsame Unternehmen in beiden Netzwerken sowie die Gehaltsstrukturen innerhalb der Überschneidungsbereiche analysiert.
+
+
+
+# Analyse
+## Datenbereinigung
+Bei der Durchsicht des Datensatzes viel auf, dass die Spalten "Same State" und "job_state" von der Logik her ähnlich sind.
+Dies soll nun näher unterucht werden, um spätere Fehler vorzubeugen.
+
+```{r}
+# Select "State" and "job_state" columns
+selected_data <- data %>%
+  select(State, job_state)
+
+# Display the first few rows of the selected data
+head(selected_data, 15)
+```
+Sieht so aus, als wäre beide Spalten identisch.
+```{r}
+# Check if the "State" and "job_state" columns are identical
+if (all(selected_data$State == selected_data$job_state, na.rm = TRUE)) {
+  print("All values in 'State' and 'job_state' columns are identical.")
+} else {
+  print("There are differences between 'State' and 'job_state' columns.")
+}
+```
+Jedoch trügt der Schein, da es Unterschiede gibt.
+```{r}
+# Filter rows where State is not equal to job_state
+different_states <- selected_data %>%
+  filter(State != job_state)
+
+# Display all rows where State is not equal to job_state
+print(different_states, n = Inf)
+```
+Es fällt auf, das LA und Los Angeles nicht einheitlich verwendet werden. Außerdem ist Los Angeles kein eigener Bundesstaat, sonder ein Teil von Kalifornien(CA). Dies soll nun korrigiert werden.
+
+Außerdem sollte bei weieren Vorgehen beachtet werden, dass Werte wie "Na" oder "-1" vor den Analysen entfernt werden sollten.
+```{r}
+# First step: Replace "Los Angeles" with "LA"
+data <- data %>%
+  mutate(State = ifelse(State == "Los Angeles", "LA", State),
+         job_state = ifelse(job_state == "Los Angeles", "LA", job_state))
+
+# Second step: Replace "LA" with "CA"
+data <- data %>%
+  mutate(State = ifelse(State == "LA", "CA", State),
+         job_state = ifelse(job_state == "LA", "CA", job_state))
+
+# Re-check for differences after correction
+selected_data <- data %>%
+  select(State, job_state)
+
+# Check if the "State" and "job_state" columns are identical
+if (all(selected_data$State == selected_data$job_state, na.rm = TRUE)) {
+  print("All values in 'State' and 'job_state' columns are identical.")
+} else {
+  print("There are differences between 'State' and 'job_state' columns.")
+}
+```
+
+
+## Visualisierung
+```{r, fig.height=15, fig.width=15}
+# AAus Gründen der Sichtbarkeit, werden bloß Locations mit mehr als einem Unternehmen dargestellt.
+
+# Extract relevant columns for geographic visualization
+edges_geo <- data %>%
+  select(Company = `Company Name`, Location = `Location`) %>%
+  distinct()
+
+# Calculate the number of companies per location and filter for locations with more than one company
+location_counts <- edges_geo %>%
+  group_by(Location) %>%
+  summarise(Company_Count = n()) %>%
+  filter(Company_Count > 1)  # Keep only locations with more than one company
+
+# Filter edges to include only connections for locations with more than one company
+filtered_edges <- edges_geo %>%
+  filter(Location %in% location_counts$Location)
+
+# Create an igraph object for geographic visualization
+network_geo <- graph_from_data_frame(filtered_edges, directed = FALSE)
+
+# Set vertex colors based on whether the node is a company or a location
+company_colors <- "blue"
+location_colors <- rainbow(nrow(location_counts))
+
+# Set vertex size based on the number of companies at each location
+vertex_sizes <- ifelse(V(network_geo)$name %in% location_counts$Location,
+                       sqrt(location_counts$Company_Count[match(V(network_geo)$name, location_counts$Location)]) * 2,
+                       3)  # Default size for companies
+
+# Assign colors and sizes to vertices
+V(network_geo)$size <- vertex_sizes
+V(network_geo)$color <- ifelse(V(network_geo)$name %in% filtered_edges$Company, 
+                               company_colors, 
+                               ifelse(vertex_sizes > 5, location_colors[match(V(network_geo)$name, location_counts$Location)], "grey"))
+
+# Plot the network
+plot(network_geo, 
+     vertex.label = NA,  # Remove labels from the plot
+     vertex.size = V(network_geo)$size, 
+     vertex.color = V(network_geo)$color, 
+     edge.arrow.size = 0.3, 
+     layout = layout_with_fr, 
+)
+
+# Add legend for locations with size > 5
+large_locations <- location_counts$Location[vertex_sizes[match(location_counts$Location, V(network_geo)$name)] > 5]
+large_location_colors <- location_colors[match(large_locations, location_counts$Location)]
+legend("topright", legend = large_locations, col = large_location_colors, pch = 19, title = "Locations")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Datenvisualisierung
+
+#Netzwerk von Jobtiteln und Unternehmen:
+#Visualisierung des Netzwerks, das zeigt, welche Unternehmen die meisten unterschiedlichen Jobtitel anbieten.
+#Interpretation: Zentralität der Unternehmen und welche Rolle sie im Jobmarkt spielen.
+#Degree distribution
+```{r}
+
+
+# Create the network object
+edges <- data %>%
+  select(`Job Title`, `Company Name`) %>%
+  distinct() %>%
+  rename(from = `Job Title`, to = `Company Name`)
+
+network_job_company <- graph_from_data_frame(edges, directed = FALSE)
+
+degree_distribution <- degree(network_job_company)
+hist(degree_distribution, breaks = 30, main = "Degree Distribution",
+     xlab = "Degree", ylab = "Frequency")
+
+# Community detection using the Louvain method
+communities <- cluster_louvain(network_job_company)
+plot(network_job_company, vertex.label = NA, vertex.size = 5,
+     vertex.color = communities$membership)
+
+# Calculate betweenness centrality
+betweenness_centrality <- betweenness(network_job_company)
+V(network_job_company)$size <- betweenness_centrality /
+  max(betweenness_centrality) * 10  # Scale sizes
+plot(network_job_company, vertex.label = NA,
+     vertex.size = V(network_job_company)$size)
+```
+
+
+```{r}
+# Extract relevant columns for competition analysis
+edges_competition <- data %>% 
+  select(Company_Name = `Company Name`, Competitor = `Competitors`) %>%
+  distinct()
+
+# Create an igraph object for competition analysis
+network_competition <- graph_from_data_frame(edges_competition, directed = TRUE)
+
+# Plot the competition network
+plot(network_competition, vertex.label = NA, vertex.size = 5, edge.arrow.size = 0.5)
+```
+
+## Zweite Copilot iteration 
+```{r, fig.height=15, fig.width=15}
+# Extrahiere Unternehmen und ihre Wettbewerber
+edges <- data %>%
+  filter(!is.na(Competitors) & Competitors != "-1") %>%
+  separate_rows(Competitors, sep = ", ") %>%
+  select(`Company Name`, Competitors) %>%
+  rename(from = `Company Name`, to = Competitors)
+
+# Erstelle den Graphen
+g_competitors <- graph_from_data_frame(edges, directed = FALSE)
+
+# Visualisiere das Netzwerk mit kleineren Knoten
+plot(g_competitors, vertex.label = NA,
+     vertex.size = 3,  # Kleinere Knoten
+     edge.arrow.size = 0.5,  # Kleinere Pfeile
+     main = "Unternehmensnetzwerk basierend auf Wettbewerbern",
+    )  # Höhe der Grafik in Pixeln
+
+# Calculate network metrics
+degree_centrality <- degree(g_competitors)
+betweenness_centrality <- betweenness(g_competitors)
+closeness_centrality <- closeness(g_competitors)
+eigenvector_centrality <- eigen_centrality(g_competitors)$vector
+clustering_coeff <- transitivity(g_competitors, type = "local")
+
+# Detect communities
+communities <- cluster_louvain(g_competitors)
+
+# Prepare data for visNetwork
+nodes <- data.frame(id = V(g_competitors)$name,
+                    label = V(g_competitors)$name,
+                    group = membership(communities),
+                    value = degree_centrality,
+                    title = paste("Degree:", degree_centrality, "<br>Betweenness:", betweenness_centrality, "<br>Closeness:", closeness_centrality, "<br>Eigenvector:", eigenvector_centrality))
+
+edges <- data.frame(from = as.character(edges$from), to = as.character(edges$to))
+
+# Create interactive network visualization
+visNetwork(nodes, edges) %>%
+  visOptions(highlightNearest = TRUE, nodesIdSelection = TRUE) %>%
+  visGroups(groupname = "1", color = "red") %>%
+  visGroups(groupname = "2", color = "blue") %>%
+  visGroups(groupname = "3", color = "green") %>%
+  visLayout(randomSeed = 123) %>%
+  visLegend()
+
+# Print top nodes for each centrality measure
+print("Top 5 nodes by degree centrality:")
+print(head(sort(degree_centrality, decreasing = TRUE), 5))
+
+print("Top 5 nodes by betweenness centrality:")
+print(head(sort(betweenness_centrality, decreasing = TRUE), 5))
+
+print("Top 5 nodes by closeness centrality:")
+print(head(sort(closeness_centrality, decreasing = TRUE), 5))
+
+print("Top 5 nodes by eigenvector centrality:")
+print(head(sort(eigenvector_centrality, decreasing = TRUE), 5))
+
+print("Top 5 nodes by clustering coefficient:")
+print(head(sort(clustering_coeff, decreasing = TRUE), 5))
+```
+
+```{r}
+# Standort-Cluster für Gehälter und Bewertungen
+edges_location_salary <- data %>%
+  select(Location, `Salary Estimate`) %>%
+  distinct() %>%
+  mutate(`Salary Estimate` = as.numeric(gsub("[^0-9]", "", `Salary Estimate`))) %>%
+  drop_na() %>%
+  rename(from = Location, to = `Salary Estimate`)
+
+# Remove duplicate edges
+edges_location_salary <- edges_location_salary %>%
+  distinct(from, to, .keep_all = TRUE)
+
+# Erstelle den Graphen
+g_location_salary <- graph_from_data_frame(edges_location_salary, directed = FALSE)
+
+# Visualisiere das Netzwerk
+plot(g_location_salary, vertex.label = NA, vertex.size = 5, 
+     edge.arrow.size = 0.5, main = "Standort-Cluster für Gehälter und Bewertungen")
+```
+
+# Conclusion
+.....
+
+
+# Literaturverzeichnis
+Davenport, Thomas H.; Patil, D. J. 2012. »Data Scientist: The Sexiest Job of the 21st Century«, in Harvard Business Review vom 1. Oktober 2012. https://hbr.org/2012/10/data-scientist-the-sexiest-job-of-the-21st-century (Zugriff vom 30.10.2024).
+
+Google Trends, https://trends.google.com/trends/explore?date=all&q=%22data%20science%22,%22data%20scientist%22 (Zugriff vom 30.10.2024).
