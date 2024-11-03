@@ -264,7 +264,8 @@ if (all(selected_data$State == selected_data$job_state, na.rm = TRUE)) {
 ```
 
 
-## Visualisierung
+## Netzwerkbildung und Visualisierung
+### Geografisches Netzwerk
 ```{r, fig.height=15, fig.width=15}
 # AAus Gründen der Sichtbarkeit, werden bloß Locations mit mehr als einem Unternehmen dargestellt.
 
@@ -317,13 +318,107 @@ legend("topright", legend = large_locations, col = large_location_colors, pch = 
 
 ```
 
+### Wettbewerbsnetzwerk
+
+```{r, fig.height=15, fig.width=15}
+# Extrahiere Unternehmen und ihre Wettbewerber
+edges <- data %>%
+  filter(!is.na(Competitors) & Competitors != "-1") %>%
+  separate_rows(Competitors, sep = ", ") %>%
+  select(`Company Name`, Competitors) %>%
+  rename(from = `Company Name`, to = Competitors) %>%
+  mutate(weight = 1)  # Gewichtung für direkte Wettbewerber
+
+# Füge Unternehmen in derselben Branche mit Gewichtung 0.5 hinzu
+industry_edges <- data %>%
+  filter(!is.na(Industry)) %>%
+  select(`Company Name`, Industry) %>%
+  inner_join(data %>% select(`Company Name`, Industry), by = "Industry") %>%
+  filter(`Company Name.x` != `Company Name.y`) %>%
+  select(from = `Company Name.x`, to = `Company Name.y`) %>%
+  mutate(weight = 0.5)  # Gewichtung für gleiche Branche
+
+# Kombiniere beide Datensätze
+all_edges <- bind_rows(edges, industry_edges)
+
+# Erstelle den Graphen
+g_competitors <- graph_from_data_frame(all_edges, directed = FALSE)
+
+# Entferne mehrere Kanten zwischen denselben Punkten
+g_competitors <- simplify(g_competitors, remove.multiple = TRUE, edge.attr.comb = "first")
+
+# Setze die Farben der Kanten basierend auf der Gewichtung
+E(g_competitors)$color <- ifelse(E(g_competitors)$weight == 1, "red", "blue")
+
+# Visualisiere das Netzwerk mit kleineren Knoten
+plot(g_competitors, vertex.label = NA,
+     vertex.size = 2,  # Kleinere Knoten
+     edge.width = E(g_competitors)$weight,  # Gewichtung der Kanten
+     edge.arrow.size = 0.5,  # Kleinere Pfeile
+     main = "Unternehmensnetzwerk basierend auf Wettbewerbern und Branchen",
+     layout = layout_with_fr
+)
+
+# Legende für Kantenfarben
+legend("topright", legend = c("Direct Competitors", "Same Industry"), fill = c("red", "blue"))
+```
 
 
+## Zentralitätsanalyse innerhalb der Netzwerke
+### Betweenness-Zentralität
+### Degree-Zentralität
+### Eigenvector-Zentralität
 
+## Gehaltsverteilung in Netzwerkzentren und Peripherien
+### Cluster-Analyse
+### Regressionen
+```{r}
+# Calculate network metrics
+degree_centrality <- degree(g_competitors)
+betweenness_centrality <- betweenness(g_competitors)
+closeness_centrality <- closeness(g_competitors)
+eigenvector_centrality <- eigen_centrality(g_competitors)$vector
+clustering_coeff <- transitivity(g_competitors, type = "local")
+```
 
+```{r}
+# Detect communities
+communities <- cluster_louvain(g_competitors)
 
+# Prepare data for visNetwork
+nodes <- data.frame(id = V(g_competitors)$name,
+                    label = V(g_competitors)$name,
+                    group = membership(communities),
+                    value = degree_centrality,
+                    title = paste("Degree:", degree_centrality, "<br>Betweenness:", betweenness_centrality, "<br>Closeness:", closeness_centrality, "<br>Eigenvector:", eigenvector_centrality))
 
+edges <- data.frame(from = as.character(edges$from), to = as.character(edges$to))
 
+# Create interactive network visualization
+visNetwork(nodes, edges) %>%
+  visOptions(highlightNearest = TRUE, nodesIdSelection = TRUE) %>%
+  visGroups(groupname = "1", color = "red") %>%
+  visGroups(groupname = "2", color = "blue") %>%
+  visGroups(groupname = "3", color = "green") %>%
+  visLayout(randomSeed = 123) %>%
+  visLegend()
+
+# Print top nodes for each centrality measure
+print("Top 5 nodes by degree centrality:")
+print(head(sort(degree_centrality, decreasing = TRUE), 5))
+
+print("Top 5 nodes by betweenness centrality:")
+print(head(sort(betweenness_centrality, decreasing = TRUE), 5))
+
+print("Top 5 nodes by closeness centrality:")
+print(head(sort(closeness_centrality, decreasing = TRUE), 5))
+
+print("Top 5 nodes by eigenvector centrality:")
+print(head(sort(eigenvector_centrality, decreasing = TRUE), 5))
+
+print("Top 5 nodes by clustering coefficient:")
+print(head(sort(clustering_coeff, decreasing = TRUE), 5))
+```
 
 
 

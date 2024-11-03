@@ -460,7 +460,11 @@ Vergütungen geordnet und in Form eines Balkendiagramms dargestellt.
 
 \pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-6-1.pdf}}
 
-Kanten und Knoten ergänzen
+Da die Datengrundlage nicht in einem igraph-Objekt vorliegt und
+ungerichtet ist, ist es notwendig Knoten, Kanten sowie relevante
+Attribute wie beispielsweise Gewichtungen zu definieren, um überhaupt
+Netzwerkvisualisierungen in R durchführen zu können. Doch dazu mehr im
+nächsten Kapitel.
 
 \section{Analysestrategie}\label{analysestrategie}
 
@@ -655,7 +659,10 @@ Außerdem sollte bei weieren Vorgehen beachtet werden, dass Werte wie
 ## [1] "All values in 'State' and 'job_state' columns are identical."
 \end{verbatim}
 
-\subsection{Visualisierung}\label{visualisierung}
+\subsection{Netzwerkbildung und
+Visualisierung}\label{netzwerkbildung-und-visualisierung}
+
+\subsubsection{Geografisches Netzwerk}\label{geografisches-netzwerk}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -712,6 +719,235 @@ Außerdem sollte bei weieren Vorgehen beachtet werden, dass Werte wie
 
 \pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-11-1.pdf}}
 
+\subsubsection{Wettbewerbsnetzwerk}\label{wettbewerbsnetzwerk}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Extrahiere Unternehmen und ihre Wettbewerber}
+\NormalTok{edges }\OtherTok{\textless{}{-}}\NormalTok{ data }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(Competitors) }\SpecialCharTok{\&}\NormalTok{ Competitors }\SpecialCharTok{!=} \StringTok{"{-}1"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{separate\_rows}\NormalTok{(Competitors, }\AttributeTok{sep =} \StringTok{", "}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{select}\NormalTok{(}\StringTok{\textasciigrave{}}\AttributeTok{Company Name}\StringTok{\textasciigrave{}}\NormalTok{, Competitors) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{rename}\NormalTok{(}\AttributeTok{from =} \StringTok{\textasciigrave{}}\AttributeTok{Company Name}\StringTok{\textasciigrave{}}\NormalTok{, }\AttributeTok{to =}\NormalTok{ Competitors) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{weight =} \DecValTok{1}\NormalTok{)  }\CommentTok{\# Gewichtung für direkte Wettbewerber}
+
+\CommentTok{\# Füge Unternehmen in derselben Branche mit Gewichtung 0.5 hinzu}
+\NormalTok{industry\_edges }\OtherTok{\textless{}{-}}\NormalTok{ data }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(Industry)) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{select}\NormalTok{(}\StringTok{\textasciigrave{}}\AttributeTok{Company Name}\StringTok{\textasciigrave{}}\NormalTok{, Industry) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{inner\_join}\NormalTok{(data }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{select}\NormalTok{(}\StringTok{\textasciigrave{}}\AttributeTok{Company Name}\StringTok{\textasciigrave{}}\NormalTok{, Industry), }\AttributeTok{by =} \StringTok{"Industry"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(}\StringTok{\textasciigrave{}}\AttributeTok{Company Name.x}\StringTok{\textasciigrave{}} \SpecialCharTok{!=} \StringTok{\textasciigrave{}}\AttributeTok{Company Name.y}\StringTok{\textasciigrave{}}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{select}\NormalTok{(}\AttributeTok{from =} \StringTok{\textasciigrave{}}\AttributeTok{Company Name.x}\StringTok{\textasciigrave{}}\NormalTok{, }\AttributeTok{to =} \StringTok{\textasciigrave{}}\AttributeTok{Company Name.y}\StringTok{\textasciigrave{}}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{weight =} \FloatTok{0.5}\NormalTok{)  }\CommentTok{\# Gewichtung für gleiche Branche}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Warning in inner_join(., data %>% select(`Company Name`, Industry), by = "Industry"): Detected an unexpected many-to-many relationship between `x` and `y`.
+## i Row 1 of `x` matches multiple rows in `y`.
+## i Row 2 of `y` matches multiple rows in `x`.
+## i If a many-to-many relationship is expected, set `relationship =
+##   "many-to-many"` to silence this warning.
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Kombiniere beide Datensätze}
+\NormalTok{all\_edges }\OtherTok{\textless{}{-}} \FunctionTok{bind\_rows}\NormalTok{(edges, industry\_edges)}
+
+\CommentTok{\# Erstelle den Graphen}
+\NormalTok{g\_competitors }\OtherTok{\textless{}{-}} \FunctionTok{graph\_from\_data\_frame}\NormalTok{(all\_edges, }\AttributeTok{directed =} \ConstantTok{FALSE}\NormalTok{)}
+
+\CommentTok{\# Entferne mehrere Kanten zwischen denselben Punkten}
+\NormalTok{g\_competitors }\OtherTok{\textless{}{-}} \FunctionTok{simplify}\NormalTok{(g\_competitors, }\AttributeTok{remove.multiple =} \ConstantTok{TRUE}\NormalTok{, }\AttributeTok{edge.attr.comb =} \StringTok{"first"}\NormalTok{)}
+
+\CommentTok{\# Setze die Farben der Kanten basierend auf der Gewichtung}
+\FunctionTok{E}\NormalTok{(g\_competitors)}\SpecialCharTok{$}\NormalTok{color }\OtherTok{\textless{}{-}} \FunctionTok{ifelse}\NormalTok{(}\FunctionTok{E}\NormalTok{(g\_competitors)}\SpecialCharTok{$}\NormalTok{weight }\SpecialCharTok{==} \DecValTok{1}\NormalTok{, }\StringTok{"red"}\NormalTok{, }\StringTok{"blue"}\NormalTok{)}
+
+\CommentTok{\# Visualisiere das Netzwerk mit kleineren Knoten}
+\FunctionTok{plot}\NormalTok{(g\_competitors, }\AttributeTok{vertex.label =} \ConstantTok{NA}\NormalTok{,}
+     \AttributeTok{vertex.size =} \DecValTok{2}\NormalTok{,  }\CommentTok{\# Kleinere Knoten}
+     \AttributeTok{edge.width =} \FunctionTok{E}\NormalTok{(g\_competitors)}\SpecialCharTok{$}\NormalTok{weight,  }\CommentTok{\# Gewichtung der Kanten}
+     \AttributeTok{edge.arrow.size =} \FloatTok{0.5}\NormalTok{,  }\CommentTok{\# Kleinere Pfeile}
+     \AttributeTok{main =} \StringTok{"Unternehmensnetzwerk basierend auf Wettbewerbern und Branchen"}\NormalTok{,}
+     \AttributeTok{layout =}\NormalTok{ layout\_with\_fr}
+\NormalTok{)}
+
+\CommentTok{\# Legende für Kantenfarben}
+\FunctionTok{legend}\NormalTok{(}\StringTok{"topright"}\NormalTok{, }\AttributeTok{legend =} \FunctionTok{c}\NormalTok{(}\StringTok{"Direct Competitors"}\NormalTok{, }\StringTok{"Same Industry"}\NormalTok{), }\AttributeTok{fill =} \FunctionTok{c}\NormalTok{(}\StringTok{"red"}\NormalTok{, }\StringTok{"blue"}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-12-1.pdf}}
+
+\subsection{Zentralitätsanalyse innerhalb der
+Netzwerke}\label{zentralituxe4tsanalyse-innerhalb-der-netzwerke}
+
+\subsubsection{Betweenness-Zentralität}\label{betweenness-zentralituxe4t}
+
+\subsubsection{Degree-Zentralität}\label{degree-zentralituxe4t}
+
+\subsubsection{Eigenvector-Zentralität}\label{eigenvector-zentralituxe4t}
+
+\subsection{Gehaltsverteilung in Netzwerkzentren und
+Peripherien}\label{gehaltsverteilung-in-netzwerkzentren-und-peripherien}
+
+\subsubsection{Cluster-Analyse}\label{cluster-analyse}
+
+\subsubsection{Regressionen}\label{regressionen}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Calculate network metrics}
+\NormalTok{degree\_centrality }\OtherTok{\textless{}{-}} \FunctionTok{degree}\NormalTok{(g\_competitors)}
+\NormalTok{betweenness\_centrality }\OtherTok{\textless{}{-}} \FunctionTok{betweenness}\NormalTok{(g\_competitors)}
+\NormalTok{closeness\_centrality }\OtherTok{\textless{}{-}} \FunctionTok{closeness}\NormalTok{(g\_competitors)}
+\NormalTok{eigenvector\_centrality }\OtherTok{\textless{}{-}} \FunctionTok{eigen\_centrality}\NormalTok{(g\_competitors)}\SpecialCharTok{$}\NormalTok{vector}
+\NormalTok{clustering\_coeff }\OtherTok{\textless{}{-}} \FunctionTok{transitivity}\NormalTok{(g\_competitors, }\AttributeTok{type =} \StringTok{"local"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Detect communities}
+\NormalTok{communities }\OtherTok{\textless{}{-}} \FunctionTok{cluster\_louvain}\NormalTok{(g\_competitors)}
+
+\CommentTok{\# Prepare data for visNetwork}
+\NormalTok{nodes }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}\AttributeTok{id =} \FunctionTok{V}\NormalTok{(g\_competitors)}\SpecialCharTok{$}\NormalTok{name,}
+                    \AttributeTok{label =} \FunctionTok{V}\NormalTok{(g\_competitors)}\SpecialCharTok{$}\NormalTok{name,}
+                    \AttributeTok{group =} \FunctionTok{membership}\NormalTok{(communities),}
+                    \AttributeTok{value =}\NormalTok{ degree\_centrality,}
+                    \AttributeTok{title =} \FunctionTok{paste}\NormalTok{(}\StringTok{"Degree:"}\NormalTok{, degree\_centrality, }\StringTok{"\textless{}br\textgreater{}Betweenness:"}\NormalTok{, betweenness\_centrality, }\StringTok{"\textless{}br\textgreater{}Closeness:"}\NormalTok{, closeness\_centrality, }\StringTok{"\textless{}br\textgreater{}Eigenvector:"}\NormalTok{, eigenvector\_centrality))}
+
+\NormalTok{edges }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}\AttributeTok{from =} \FunctionTok{as.character}\NormalTok{(edges}\SpecialCharTok{$}\NormalTok{from), }\AttributeTok{to =} \FunctionTok{as.character}\NormalTok{(edges}\SpecialCharTok{$}\NormalTok{to))}
+
+\CommentTok{\# Create interactive network visualization}
+\FunctionTok{visNetwork}\NormalTok{(nodes, edges) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{visOptions}\NormalTok{(}\AttributeTok{highlightNearest =} \ConstantTok{TRUE}\NormalTok{, }\AttributeTok{nodesIdSelection =} \ConstantTok{TRUE}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{visGroups}\NormalTok{(}\AttributeTok{groupname =} \StringTok{"1"}\NormalTok{, }\AttributeTok{color =} \StringTok{"red"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{visGroups}\NormalTok{(}\AttributeTok{groupname =} \StringTok{"2"}\NormalTok{, }\AttributeTok{color =} \StringTok{"blue"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{visGroups}\NormalTok{(}\AttributeTok{groupname =} \StringTok{"3"}\NormalTok{, }\AttributeTok{color =} \StringTok{"green"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{visLayout}\NormalTok{(}\AttributeTok{randomSeed =} \DecValTok{123}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{visLegend}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Print top nodes for each centrality measure}
+\FunctionTok{print}\NormalTok{(}\StringTok{"Top 5 nodes by degree centrality:"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "Top 5 nodes by degree centrality:"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{print}\NormalTok{(}\FunctionTok{head}\NormalTok{(}\FunctionTok{sort}\NormalTok{(degree\_centrality, }\AttributeTok{decreasing =} \ConstantTok{TRUE}\NormalTok{), }\DecValTok{5}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##    New England Biolabs    Nektar Therapeutics               Sunovion 
+##                     35                     35                     35 
+## Saama Technologies Inc                  IQVIA 
+##                     35                     35
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{print}\NormalTok{(}\StringTok{"Top 5 nodes by betweenness centrality:"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "Top 5 nodes by betweenness centrality:"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{print}\NormalTok{(}\FunctionTok{head}\NormalTok{(}\FunctionTok{sort}\NormalTok{(betweenness\_centrality, }\AttributeTok{decreasing =} \ConstantTok{TRUE}\NormalTok{), }\DecValTok{5}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Saama Technologies Inc              Accenture                    IBM 
+##               25426.13               17022.28               14640.00 
+##     Motorola Solutions                ManTech 
+##               14570.00                9039.75
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{print}\NormalTok{(}\StringTok{"Top 5 nodes by closeness centrality:"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "Top 5 nodes by closeness centrality:"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{print}\NormalTok{(}\FunctionTok{head}\NormalTok{(}\FunctionTok{sort}\NormalTok{(closeness\_centrality, }\AttributeTok{decreasing =} \ConstantTok{TRUE}\NormalTok{), }\DecValTok{5}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Truckstop.com         SMC 3      Bill.com    TransUnion       Zest AI 
+##             2             2             2             2             2
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{print}\NormalTok{(}\StringTok{"Top 5 nodes by eigenvector centrality:"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "Top 5 nodes by eigenvector centrality:"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{print}\NormalTok{(}\FunctionTok{head}\NormalTok{(}\FunctionTok{sort}\NormalTok{(eigenvector\_centrality, }\AttributeTok{decreasing =} \ConstantTok{TRUE}\NormalTok{), }\DecValTok{5}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##             AstraZeneca                Novartis                Exelixis 
+##               1.0000000               0.9864565               0.9863625 
+##                     GSK BioMarin Pharmaceutical 
+##               0.9639767               0.9623126
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{print}\NormalTok{(}\StringTok{"Top 5 nodes by clustering coefficient:"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "Top 5 nodes by clustering coefficient:"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{print}\NormalTok{(}\FunctionTok{head}\NormalTok{(}\FunctionTok{sort}\NormalTok{(clustering\_coeff, }\AttributeTok{decreasing =} \ConstantTok{TRUE}\NormalTok{), }\DecValTok{5}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##                              Exelixis                     Tecolote Research 
+##                                     1                                     1 
+## University of Maryland Medical System                               KnowBe4 
+##                                     1                                     1 
+##                    ClearOne Advantage 
+##                                     1
+\end{verbatim}
+
 \subsection{Datenvisualisierung}\label{datenvisualisierung}
 
 \#Netzwerk von Jobtiteln und Unternehmen: \#Visualisierung des
@@ -735,7 +971,7 @@ welche Rolle sie im Jobmarkt spielen. \#Degree distribution
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-12-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-15-1.pdf}}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -746,7 +982,7 @@ welche Rolle sie im Jobmarkt spielen. \#Degree distribution
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-12-2.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-15-2.pdf}}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -759,7 +995,7 @@ welche Rolle sie im Jobmarkt spielen. \#Degree distribution
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-12-3.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-15-3.pdf}}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -776,7 +1012,7 @@ welche Rolle sie im Jobmarkt spielen. \#Degree distribution
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-13-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-16-1.pdf}}
 
 \subsection{Zweite Copilot iteration}\label{zweite-copilot-iteration}
 
@@ -801,7 +1037,7 @@ welche Rolle sie im Jobmarkt spielen. \#Degree distribution
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-14-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-17-1.pdf}}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -974,7 +1210,7 @@ welche Rolle sie im Jobmarkt spielen. \#Degree distribution
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-15-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-18-1.pdf}}
 
 \section{Conclusion}\label{conclusion}
 
