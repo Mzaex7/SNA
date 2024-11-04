@@ -13,6 +13,7 @@ output:
 always_allow_html: true
 ---
 
+\newpage
 # Einleitung
 
 ## Requirements
@@ -55,8 +56,10 @@ data <- read_csv("data/GOOGLE_SEARCH_DATA.CSV", skip = 1)
 
 # Clean the data: Convert "<1" to 0.5 for plotting purposes
 data <- data %>%
-  mutate(`data science` = ifelse(`data science` == "<1", 0.5, as.numeric(`data science`)),
-         `data scientist` = ifelse(`data scientist` == "<1", 0.5, as.numeric(`data scientist`)))
+  mutate(`data science` = ifelse(`data science` == "<1", 0.5,
+                                 as.numeric(`data science`)),
+         `data scientist` = ifelse(`data scientist` == "<1", 0.5,
+                                   as.numeric(`data scientist`)))
 
 # Convert the 'Monat' column to Date type
 data$Monat <- as.Date(paste0(data$Monat, "-01"))
@@ -99,7 +102,7 @@ Dabei wurde sich an https://www.kaggle.com/code/maxzeitler/data-science-job-sala
 data <- read_csv("data/Glassdoor_DataScience_Salary.csv")
 ```
 
-Die vorliegende Arbeit basiert auf einem Datensatz, der von Kaggle stammt und Informationen zu Data-Science-Jobs in verschiedenen Unternehmen enthält. 
+Die vorliegende Arbeit basiert auf einem Datensatz von Kaggle, der Informationen über Data Science Jobs in verschiedenen Unternehmen für den US-amerikanischen Markt enthält. 
 Der Datensatz umfasst 742 Zeilen und 28 Spalten, was auf eine Anzahl von 742 verschiedenen Jobangeboten hindeutet. 
 Diese Anzahl ist kann für die Zwecke dieser Arbeit als ausreichend zu betrachten, auch wenn eine höhere Zahl an Beobachtungen möglicherweise zu präziseren Schlussfolgerungen geführt hätte.
 
@@ -151,10 +154,13 @@ avg_salary_by_job_ny <- data_ny %>%
   arrange(desc(Average_Salary))
 
 # Bar plot of average salary by job title for NY
-ggplot(avg_salary_by_job_ny, aes(x = reorder(`Job Title`, Average_Salary), y = Average_Salary)) +
+ggplot(avg_salary_by_job_ny,
+       aes(x = reorder(`Job Title`, Average_Salary), y = Average_Salary)) +
   geom_bar(stat = "identity") +
   coord_flip() +
-  labs(title = "Average Salary by Job Title in NY", x = "Job Title", y = "Average Salary") +
+  labs(title = "Average Salary by Job Title in NY",
+       x = "Job Title",
+       y = "Average Salary") +
   theme_minimal() +
   theme(
     axis.title = element_text(size = 14),
@@ -169,7 +175,7 @@ Gewichtungen zu definieren, um überhaupt Netzwerkvisualisierungen in R durchfü
 Doch dazu mehr im nächsten Kapitel.
 
 
-
+\newpage
 # Analysestrategie
 1. Geografisches Netzwerk
 
@@ -205,7 +211,7 @@ Im Rahmen des Vergleichs der Netzwerke hinsichtlich der Gehälter und des Wettbe
 Darüber hinaus werden gemeinsame Unternehmen in beiden Netzwerken sowie die Gehaltsstrukturen innerhalb der Überschneidungsbereiche analysiert.
 
 
-
+\newpage
 # Analyse
 ## Datenbereinigung
 Bei der Durchsicht des Datensatzes viel auf, dass die Spalten "Same State" und "job_state" von der Logik her ähnlich sind.
@@ -264,23 +270,29 @@ if (all(selected_data$State == selected_data$job_state, na.rm = TRUE)) {
 ```
 
 
+Nachdem die Bereinigung des Datensatzes abgeschlossen ist, kann mit der Analyse begonnen werden.
+
 ## Netzwerkbildung und Visualisierung
 ### Geografisches Netzwerk
+Nun soll ein Netzwerk erstellt werden, welches auf der geografischen Nähe von Unternehmen basiert...
 ```{r, fig.height=15, fig.width=15}
-# AAus Gründen der Sichtbarkeit, werden bloß Locations mit mehr als einem Unternehmen dargestellt.
+# Aus Gründen der Sichtbarkeit, werden bloß Locations mit mehr als einem
+# Unternehmen dargestellt.
 
 # Extract relevant columns for geographic visualization
 edges_geo <- data %>%
   select(Company = `Company Name`, Location = `Location`) %>%
   distinct()
 
-# Calculate the number of companies per location and filter for locations with more than one company
+# Calculate the number of companies per location and filter for locations
+# with more than one company
 location_counts <- edges_geo %>%
   group_by(Location) %>%
   summarise(Company_Count = n()) %>%
   filter(Company_Count > 1)  # Keep only locations with more than one company
 
-# Filter edges to include only connections for locations with more than one company
+# Filter edges to include only connections for locations with more than
+# one company
 filtered_edges <- edges_geo %>%
   filter(Location %in% location_counts$Location)
 
@@ -293,33 +305,49 @@ location_colors <- rainbow(nrow(location_counts))
 
 # Set vertex size based on the number of companies at each location
 vertex_sizes <- ifelse(V(network_geo)$name %in% location_counts$Location,
-                       sqrt(location_counts$Company_Count[match(V(network_geo)$name, location_counts$Location)]) * 2,
-                       3)  # Default size for companies
+                       sqrt(location_counts$Company_Count[
+                         match(V(network_geo)$name, location_counts$Location)
+                       ]) * 2,
+                       3) # Default size for companies
 
 # Assign colors and sizes to vertices
 V(network_geo)$size <- vertex_sizes
-V(network_geo)$color <- ifelse(V(network_geo)$name %in% filtered_edges$Company, 
-                               company_colors, 
-                               ifelse(vertex_sizes > 5, location_colors[match(V(network_geo)$name, location_counts$Location)], "grey"))
+V(network_geo)$color <- ifelse(V(network_geo)$name %in% filtered_edges$Company,
+                               company_colors,
+                               ifelse(vertex_sizes > 5,
+                                      location_colors[match(V(network_geo)$name,
+                                                            location_counts$Location)],
+                                      "grey"))
 
 # Plot the network
-plot(network_geo, 
+plot(network_geo,
      vertex.label = NA,  # Remove labels from the plot
-     vertex.size = V(network_geo)$size, 
-     vertex.color = V(network_geo)$color, 
-     edge.arrow.size = 0.3, 
-     layout = layout_with_fr, 
+     vertex.size = V(network_geo)$size,
+     vertex.color = V(network_geo)$color,
+     edge.arrow.size = 0.3,
+     layout = layout_with_fr,
 )
 
 # Add legend for locations with size > 5
-large_locations <- location_counts$Location[vertex_sizes[match(location_counts$Location, V(network_geo)$name)] > 5]
-large_location_colors <- location_colors[match(large_locations, location_counts$Location)]
-legend("topright", legend = large_locations, col = large_location_colors, pch = 19, title = "Locations")
+location_indices <- match(location_counts$Location, V(network_geo)$name)
+large_locations <- location_counts$Location[vertex_sizes[location_indices] > 5]
+
+large_location_colors <- location_colors[
+  match(large_locations, location_counts$Location)
+]
+legend("topright",
+       legend = large_locations,
+       col = large_location_colors,
+       pch = 19,
+       title = "Locations")
 
 ```
+Es lässt sich erkennen, dass ...
+
 
 ### Wettbewerbsnetzwerk
 
+Nun soll ein Netzwerk erstellt werden, welches auf der Wettbewerbssituation von Unternehmen basiert...
 ```{r, fig.height=15, fig.width=15}
 # Extrahiere Unternehmen und ihre Wettbewerber
 edges <- data %>%
@@ -345,7 +373,9 @@ all_edges <- bind_rows(edges, industry_edges)
 g_competitors <- graph_from_data_frame(all_edges, directed = FALSE)
 
 # Entferne mehrere Kanten zwischen denselben Punkten
-g_competitors <- simplify(g_competitors, remove.multiple = TRUE, edge.attr.comb = "first")
+g_competitors <- simplify(g_competitors, remove.multiple = TRUE,
+                          edge.attr.comb = "first"
+                          )
 
 # Setze die Farben der Kanten basierend auf der Gewichtung
 E(g_competitors)$color <- ifelse(E(g_competitors)$weight == 1, "red", "blue")
@@ -360,26 +390,61 @@ plot(g_competitors, vertex.label = NA,
 )
 
 # Legende für Kantenfarben
-legend("topright", legend = c("Direct Competitors", "Same Industry"), fill = c("red", "blue"))
+legend("topright", legend = c("Direct Competitors", "Same Industry"),
+       fill = c("red", "blue")
+       )
 ```
+...
+
 
 
 ## Zentralitätsanalyse innerhalb der Netzwerke
+```{r}
+# Calculate network metrics
+betweenness_centrality <- betweenness(g_competitors)
+degree_centrality <- degree(g_competitors)
+eigenvector_centrality <- eigen_centrality(g_competitors)$vector
+
+closeness_centrality <- closeness(g_competitors)
+clustering_coeff <- transitivity(g_competitors, type = "local")
+```
+
 ### Betweenness-Zentralität
+```{r}
+print("Top 5 nodes by betweenness centrality:")
+print(head(sort(betweenness_centrality, decreasing = TRUE), 5))
+```
+
 ### Degree-Zentralität
+```{r}
+print("Top 5 nodes by degree centrality:")
+print(head(sort(degree_centrality, decreasing = TRUE), 5))
+```
+
 ### Eigenvector-Zentralität
+```{r}
+print("Top 5 nodes by eigenvector centrality:")
+print(head(sort(eigenvector_centrality, decreasing = TRUE), 5))
+```
+
+
+
+
+
+# Gehaltvergleich in Netzwerkzentren und Peripherien: 
+# Überprüfen, ob zentralere Unternehmen tendenziell höhere oder niedrigere Gehälter bieten
+
 
 ## Gehaltsverteilung in Netzwerkzentren und Peripherien
 ### Cluster-Analyse
-### Regressionen
 ```{r}
-# Calculate network metrics
-degree_centrality <- degree(g_competitors)
-betweenness_centrality <- betweenness(g_competitors)
-closeness_centrality <- closeness(g_competitors)
-eigenvector_centrality <- eigen_centrality(g_competitors)$vector
-clustering_coeff <- transitivity(g_competitors, type = "local")
+# Detect communities
+communities <- cluster_louvain(g_competitors)
 ```
+
+### Regressionen
+
+
 
 ```{r}
 # Detect communities
@@ -390,7 +455,10 @@ nodes <- data.frame(id = V(g_competitors)$name,
                     label = V(g_competitors)$name,
                     group = membership(communities),
                     value = degree_centrality,
-                    title = paste("Degree:", degree_centrality, "<br>Betweenness:", betweenness_centrality, "<br>Closeness:", closeness_centrality, "<br>Eigenvector:", eigenvector_centrality))
+                    title = paste("Degree:", degree_centrality, 
+                                  "<br>Betweenness:", betweenness_centrality, 
+                                  "<br>Closeness:", closeness_centrality, 
+                                  "<br>Eigenvector:", eigenvector_centrality))
 
 edges <- data.frame(from = as.character(edges$from), to = as.character(edges$to))
 
@@ -523,7 +591,10 @@ nodes <- data.frame(id = V(g_competitors)$name,
                     label = V(g_competitors)$name,
                     group = membership(communities),
                     value = degree_centrality,
-                    title = paste("Degree:", degree_centrality, "<br>Betweenness:", betweenness_centrality, "<br>Closeness:", closeness_centrality, "<br>Eigenvector:", eigenvector_centrality))
+                    title = paste("Degree:", degree_centrality, 
+                                  "<br>Betweenness:", betweenness_centrality, 
+                                  "<br>Closeness:", closeness_centrality, 
+                                  "<br>Eigenvector:", eigenvector_centrality))
 
 edges <- data.frame(from = as.character(edges$from), to = as.character(edges$to))
 
@@ -574,10 +645,14 @@ plot(g_location_salary, vertex.label = NA, vertex.size = 5,
      edge.arrow.size = 0.5, main = "Standort-Cluster für Gehälter und Bewertungen")
 ```
 
+
+\newpage
 # Conclusion
 .....
 
 
+
+\newpage
 # Literaturverzeichnis
 Davenport, Thomas H.; Patil, D. J. 2012. »Data Scientist: The Sexiest Job of the 21st Century«, in Harvard Business Review vom 1. Oktober 2012. https://hbr.org/2012/10/data-scientist-the-sexiest-job-of-the-21st-century (Zugriff vom 30.10.2024).
 

@@ -1,0 +1,664 @@
+---
+title: "SNA: Bitcoin Netzwerk Visualisierung"
+author: "Elena Solodova"
+date: "2024-10-28"
+output:
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(igraph)
+library(igraphdata)
+library(readr)
+library(dplyr)
+library(ggplot2)
+```
+
+# Gliederung 
+1.	Einleitung $\\$
+  1.1 Untersuchung des Datensatzes $\\$
+  1.2 Forschungsfrage $\\$
+  1.3 Analysestrategie 
+
+2.	Analysestrategie 
+
+3.	Analyse $\\$
+  3.1 Vorbereitung der Daten $\\$
+  3.2 Aggreagtion der Daten $\\$
+  3.3 Analyse von dem Monat mit dem höchsten Vertrauen $\\$
+    3.3.1 gewichtete In-Degree-Zentralität $\\$
+    3.3.2 Betweenness-Centrality $\\$
+    3.3.3 gewichtete In-Closeness-Zentralität $\\$
+    3.3.4 Louvain-Algorithmus $\\$
+4.	Fazit
+
+5.	Ausblick 
+
+# 1. Einleitung  
+Die vorliegende Arbeit führt eine Analyse des Bitcoin Alpha Netzwerks durch, um die Vertrauensbeziehungen zwischen den Nutzern zu untersuchen.
+Bitcoin ist eine dezentrale Kryptowährung,. Sie basiert auf der Blockchain-Technologie.
+Bitcon Netzwerk ist ein Peer-to-Peer-Netzwerk, in dem die Nutzer Transaktionen direkt miteinander durchführen können, ohne dass eine zentrale Instanz wie eine Bank erforderlich ist.
+Daher ist es von einer hohen Bedeutung, das Vertrauen zwischen den Nutzern zu gewährleisten, um die Sicherheit und Integrität des Netzwerks zu gewährleisten.
+Für die Untersuchung der Vertrauensbeziehungen wird der Bitcoin Alpha Datensatz verwendet, der Personen sowie deren Vertrauens- oder Misstrauensbeziehungen beim Handel mit Bitcoin dokumentiert.
+
+Im ersten Kapitel wird auf den Datensatzt eingegangen und die Forschungsfrage formuliert.
+Im zweiten Kapitel wird die Analysestrategie festgelegt. 
+Daraufhin wird im dritten Kapitel die Datevorberetung durchgeführt.
+Dies sollte als Grundlage für die Zentralitätsanalyse (Degree, Closeness, Betweenness) und  Clusteridentifikation mittels Louvain-Algorithmus dienen.
+Im vierten Kapitel werden die Ergebnisse zusammengefasst und anschlissend, im fünften Kapitel, wird ein Ausblick gegeben.
+
+## 1.1 Untersuchung des Datensatzes 
+Der für die Arbeit verwendete Datensatz stammt von Stanford Network Analysis Project (SNAP).^[https://snap.stanford.edu/data/soc-sign-bitcoin-alpha.html (Abgerufen am 28.10.2024)]
+Dieser Datensatz stellt eine Art „who-trusts-whom“-Netzwerk dar, in dem die Beziehungen durch gegenseitiges Vertrauen oder Misstrauen gekennzeichnet sind.
+Der Datensatz wurde bereits für Studie und Analyse von Bitcoin-Netzwerken zur Identifizierung des Einflusses dynamischer Vertrauensverhaltensmuster verwendet.^[Islam, Islam, Basar 2024, S. 476 ff.]
+Das Bitcoin Alpha Netzwerk ist eine Plattform, auf der anonyme Bitcoin-Nutzer einander bewerten können, um die Vertrauenswürdigkeit von anderen Nutzern zu beurteilen. 
+Auf dieser Plattform können Mitglieder anderen Nutzern eine Vertrauensbewertung von -10 (totales Misstrauen) bis +10 (volles Vertrauen) geben.
+Der Datensatz hat folgende Spalten: SOURCE, TARGET, RATING, TIME.
+Die Analyse der Vertrauensbeziehungen im Bitcoin Alpha Netzwerk kann dazu beitragen, die Struktur und Dynamik des Netzwerks besser zu verstehen und potenzielle Risiken zu identifizieren.
+
+```{r}
+# CSV-Datei einlesen
+data <- read_csv("soc-sign-bitcoinalpha.csv", col_names = c("SOURCE", "TARGET", "RATING", "TIME"))
+# Erstellen des Graphen
+g <- graph_from_data_frame(data, directed = TRUE)
+```
+
+```{r}
+# Informationen zum Netzwerk 
+is_directed <- is_directed(g)
+is_weighted <- "weight" %in% edge_attr_names(g)
+num_nodes <- vcount(g)
+num_edges <- ecount(g)
+vertex_attributes <- vertex_attr_names(g)
+edge_attributes <- edge_attr_names(g)
+
+
+# Zusammenfassung
+summary_output <- capture.output(summary(g))
+
+# Ausgabe der Information 
+output <- list(
+  Gerichtet = paste("Das Netzwerk ist gerichtet:", is_directed),
+  Gewichtet = paste("Das Netzwerk ist gewichtet:", is_weighted),
+  Anzahl_der_Knoten = paste("Anzahl der Knoten:", num_nodes),
+  Anzahl_der_Kanten = paste("Anzahl der Kanten:", num_edges),
+  Knotenattribute = paste("Knotenattribute:", paste(vertex_attributes, collapse = ", ")),
+  Kantenattribute = paste("Kantenattribute:", paste(edge_attributes, collapse = ", ")),
+  Zusammenfassung = paste("Zusammenfassung des Netzwerks:\n", paste(summary_output, collapse = "\n"))
+)
+for (item in output) {
+  print(item)
+}
+```
+
+Das Bitcoin Alpha Netzwerk besteht aus 3783 Nutzern (Knoten), die jeweils ein Attribut "name", das die ID des Nutzers darstellt, haben und 
+24186 Verbindungen (Kanten), die zwei Attribute: „RATING“, das die Bewertung zwischen den Nutzern (von -10 bis +10) darstellt, und „TIME“, das den Zeitpunkt der Bewertung angibt.
+Die Verbindungen zwischen den Nutzern sind gerichtet. Dies bedeutet, dass die Bewertungen asymmetrisch sind und von einem Nutzer zu einem anderen gerichtet sind.
+Die Bewertungen sind allerdings nicht gewichtet.
+Da die Bewertungen nicht gewichtet sind, wird dies geändert, sodass das Gewicht der Kanten nun durch das Attribut 'RATING' zugewiesen wird, was bedeutet, dass das Gewicht eine numerische Bewertung darstellt, die die Stärke des Vertrauens oder Misstrauens zwischen den Nutzern angibt.
+```{r}
+# Zuweisung der RATING-Werte
+E(g)$weight <- as.numeric(E(g)$RATING)
+
+# Verteilung der RATING-Werte anzeigen
+rating_distribution <- table(data$RATING)
+print(rating_distribution)
+
+# Visualisierung
+library(ggplot2)
+ggplot(data, aes(x = RATING)) +
+  geom_histogram(binwidth = 1, fill = "skyblue", color = "black") +
+  labs(
+    title = "Verteilung der RATING-Werte",
+    x = "RATING",
+    y = "Anzahl"
+  ) +
+  theme_minimal()
+```
+
+Die RATING werte verteilen sich von -10 bis 10, vobe die meisten Bewertungen bei 1 liegen. 
+
+Nun wird der Graph vollständig visualisiert.
+```{r, fig.width=15, fig.height=15}
+plot(
+  g,
+  vertex.size = 1,               
+  vertex.label = NA,              
+  edge.arrow.size = 0.1,          
+  vertex.color = "skyblue",       
+  rescale = TRUE,                 
+  asp = 0,                       
+  margin = 0                 
+)
+```
+
+Da das netzwerk 24186 Kanten und 3783 Knoten beinhaltet, ist es schwer, es übersichtlich darzustellen. 
+Daher werden die Daten in dem nächsten Kapitel entsprechend vorbereitet, um nur die relevanten Teile des Netzwerks zu betrachten.\\$\\$
+
+Da die Gewichtung des Netzwerkes sowohl positiv als auch negativ ist, wird es visualisiert, wie sich die Bewertungen verteilen. 
+
+```{r, fig.width=5, fig.height=5}
+plot(
+  g,
+  vertex.size = 0.3,
+  vertex.label = NA,
+  edge.arrow.size = 0.1,
+  vertex.color = "skyblue",
+  edge.color = ifelse(E(g)$weight > 0, "#2ea52e", "red"),
+  rescale = TRUE,
+  asp = 0,
+  margin = 0,
+  layout = layout_in_circle(g)  # runde Darstellung
+)
+```
+
+Nun werden getrennt zwie Graphen erstellt: einer für positive und einer für negative Bewertungen.
+```{r, fig.width=15, fig.height=15}
+
+# Plot für positive Kanten
+g_positive <- subgraph.edges(g, E(g)[E(g)$weight > 0], delete.vertices = TRUE)
+num_positive_edges <- ecount(g_positive)
+plot(
+  g_positive,
+  vertex.size = 2,              
+  vertex.label = NA,            
+  edge.arrow.size = 0.1,        
+  vertex.color = "skyblue",     
+  edge.color = "#2ea52e",         
+  rescale = TRUE,               
+  asp = 0,                      
+  margin = 0,
+  main = paste("Positive Bewertungen:", num_positive_edges),
+  main.cex = 5 
+)
+
+# Plot für negative Kanten
+g_negative <- subgraph.edges(g, E(g)[E(g)$weight < 0], delete.vertices = TRUE)
+num_negative_edges <- ecount(g_negative)
+plot(
+  g_negative,
+  vertex.size = 2,              
+  vertex.label = NA,            
+  edge.arrow.size = 0.1,        
+  vertex.color = "skyblue",     
+  edge.color = "red",           
+  rescale = TRUE,               
+  asp = 0,                      
+  margin = 0,
+  main = paste("Negative Bewertungen:", num_negative_edges),
+  main.cex = 5
+)
+```
+
+
+## 1.2 Forschungsfrage  
+Die vorliegende Arbeit zielt darauf ab, die strukturellen Eigenschaften des Bitcoin Alpha Netzwerks in dem Monat mit dem höchsten Vertrauen, zu analysieren, indem die Schlüsselakteure mit hohen Zentralitätswerten identifiziert und die interne Gemeinschaftsstruktur untersucht werden. 
+Die Forschungsfrage lautet: "Welche Nutzer und Gemeinschaften spielen im Monat mit dem höchsten Vertrauen innerhalb des Bitcoin Alpha Vertrauensnetzwerks eine zentrale Rolle?"
+
+# 2. Analysestrategie
+Zunächst werden die Daten bereinigt und anschlissend nach Monat aggregiert. 
+Daraufhin wird in jedem Monat das Vertrauen berechnet, indem die Summe der positiven Bewertungen ermittelt wird, und der Monat mit dem höchsten Vertrauen identifiziert.
+In dem Monat mit dem höchsten vertrauen wird die Zentralitätsanalyse durchgeführt, soweie mithilfe von Loivitan Algorithmus nach Gemeinschaften gesucht. 
+
+# 3. Analyse
+## 3.1 Vorbereitung der Daten
+Um die Analyse durchzuführen, werden die Daten bereinigt und vorbereitet.
+
+### Überprüfung der fehlenden Werten:$\\$
+
+```{r}
+any(is.na(V(g)))  
+any(is.na(E(g))) 
+```
+
+### Entfernen der doppelten Kanten: $\\$
+```{r}
+# Original-Netzwerk
+g_original <- g
+
+# Bereinigtes Netzwerk 
+g_cleaned <- simplify(g, remove.multiple = TRUE, remove.loops = TRUE)
+E(g_cleaned)$weight <- as.numeric(E(g)$RATING)
+g_cleaned <- delete_vertices(g_cleaned, degree(g_cleaned) == 0)
+g_cleaned <- subgraph.edges(g, E(g)[!(ends(g, E(g))[, 1] == ends(g, E(g))[, 2])], delete.vertices = TRUE)
+```
+
+### Nur Knoten mit mehr als 5 Kanten behalten $\\$
+```{r, fig.width=17, fig.height=20}
+min_edges_threshold <- 5  
+node_degrees <- degree(g_cleaned)
+
+# Liste der Knoten, die entfernt werden sollen
+nodes_to_remove <- names(node_degrees[node_degrees < min_edges_threshold])
+
+# Graphen ohne die Knoten, die entfernt werden sollen
+g_filtered <- delete_vertices(g_cleaned, nodes_to_remove)
+
+# Anzahl der Knoten und Kanten in bereinigtem Graphen
+num_filtered_nodes <- vcount(g_filtered)
+num_filtered_edges <- ecount(g_filtered)
+cat("Anzahl der Knoten nach der Filterung:", num_filtered_nodes, "\n")
+cat("Anzahl der Kanten nach der Filterung:", num_filtered_edges, "\n")
+```
+
+
+## 3.2 Aggregation der Daten
+Die Daten werden Aggregiert, um zu schauen, in welchem Moant das Größte Vertrauen herrschte.
+
+```{r}
+# Umwandlung der Zeit
+data$TIME <- as.POSIXct(data$TIME, origin = "1970-01-01", tz = "UTC")
+
+data <- data %>%
+  mutate(MONTH = format(TIME, "%Y-%m"))
+
+data <- data %>%
+  mutate(
+    Vertrauen = ifelse(RATING > 0, RATING, 0),   # Positive Bewertungen für Vertrauen
+  )
+
+# Aggregation
+aggregated_data <- data %>%
+  group_by(MONTH) %>%
+  summarise(
+    Vertrauen = sum(Vertrauen),  # Summe des Vertrauens                 
+  ) %>%
+  arrange(MONTH)  
+
+# Ausgabe der gesamten Tabelle
+print(aggregated_data, n = Inf)  # alle Zeilen der Tabelle 
+
+# Plot über die Entwicklung des Vertrauens und Misstrauens über die Zeit
+ggplot(aggregated_data, aes(x = as.Date(paste0(MONTH, "-01")))) +
+  geom_line(aes(y = Vertrauen, color = "Vertrauen"), linewidth = 1) +
+  labs(
+    title = "Entwicklung von Vertrauen über die Zeit",
+    x = "Monat",
+    y = "Summe der Bewertungen",
+    color = "Legende"
+  ) +
+  scale_color_manual(values = c("Vertrauen" = "#2ea52e")) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "bottom"
+  )
+
+# Monat mit dem höchsten Vertrauen
+max_vertrauen_month <- aggregated_data[which.max(aggregated_data$Vertrauen), ]
+
+cat("Monat mit dem höchsten Vertrauen:\n")
+print(max_vertrauen_month)
+```
+
+Somit ist wurde in Monat Juni im Jahr 2011 das hochste Vertrauen erreicht.
+Wie es dem Artikel zu "Bitcoin's Price History" zu entnehmen ist, erlebte im Juni 2011 Bitcoin einen enormen Vertrauensschub, da sich der Preis der Währung erstmals exponentiell steigerte und eine breitere Bekanntheit gewann.^[https://www.investopedia.com/articles/forex/121815/bitcoins-price-history.asp (Abgerufen am 29.10.2024)]
+Bis zu diesem Zeitpunkt lag der Bitcoin-Wert bei unter einem Dollar, stieg dann aber auf bis zu 29,60 US-Dollar an.
+Dies Spiegelte sich in dem Vertrauen der Nutzer wieder, die sich gegenseitig positiver bewerteten, als davor.
+
+
+```{r}
+# Umwandlung der Zeit 
+data$TIME <- as.POSIXct(data$TIME, origin = "1970-01-01", tz = "UTC")
+
+# Extrahiere das Jahr und den Monat aus dem Datum
+data <- data %>%
+  mutate(MONTH = format(TIME, "%Y-%m"))
+
+# Daten für Juni 2011
+data_june_2011 <- data %>%
+  filter(MONTH == "2011-06")
+g_june_2011 <- graph_from_data_frame(data_june_2011, directed = TRUE)
+
+# RATING-Werte zuweisen
+E(g_june_2011)$weight <- as.numeric(E(g_june_2011)$RATING)
+```
+
+```{r, fig.width=15, fig.height=17}
+# Visualisiere den Graphen
+plot(
+  g_june_2011,
+  vertex.size = 2,  # Größe der Knoten
+  vertex.label = NA,  # Keine Beschriftung der Knoten
+  edge.arrow.size = 0.3,  # Größe der Pfeile
+  edge.color = ifelse(E(g_june_2011)$weight > 0, "#43c843", "red"),  # Grün für positives Vertrauen, rot für Misstrauen
+  main = "Bitcoin Alpha Netzwerk - Vertrauen im Juni 2011"  # Titel des Plots
+)
+```
+Nun wurde die zu analysierenden Daten auf den Monat Juni 2011 reduziert und bereinigt. 
+Somit werden die Zentralitätsmaßen und der Louvain-Algorithmus nur auf diesen Monat angewendet.
+
+```{r}
+# Informationen
+num_nodes_june <- gorder(g_june_2011)  
+num_edges_june <- gsize(g_june_2011)  
+cat("Monat mit dem höchsten Vertrauen (2011-06):\n")
+cat("Anzahl der Knoten:", num_nodes_june, "\n")
+cat("Anzahl der Kanten:", num_edges_june, "\n\n")
+```
+
+
+## 3.3 Analyse von dem Moant mt dem höchsten Vertrauen 
+### 3.3.1 gewichtete In-Degree-Zentralität  
+In der vorliegenden Arbeit werden nur die eingehenden Bewertungen berücksichtigt, also die In-Degree-Zentralität.
+Es werden sowohl positive als auch negative Bewertung zur Berechnung herangezogen. 
+Somit wird ein "Netto"-Wert ermittelt, indem von den positiven Bewertungen die negativen Bewertungen abgezogen werden.
+
+Das Ergebnis zeigt ein balanciertes Bild der Vertrauensbeziehungen eines Nutzers im Netzwerk.
+Auf diese Weise zeigt gewichtete In-Degree-Zentralität welchem Nutzer im Netzwerk am mesiten vertraut wird. 
+
+```{r}
+# gewichtete In-Degree-Zentralität
+weighted_in_degree_centrality <- strength(g_june_2011, mode = "in", weights = E(g_june_2011)$weight)
+V(g_june_2011)$weighted_in_degree_centrality <- weighted_in_degree_centrality
+
+weighted_in_degree_table <- data.frame(
+  Node = V(g_june_2011)$name,
+  Weighted_In_Degree_Centrality = weighted_in_degree_centrality
+)
+
+# Tabelle in absteigender Reihenfolge 
+weighted_in_degree_table <- weighted_in_degree_table[order(-weighted_in_degree_table$Weighted_In_Degree_Centrality), ]
+
+ggplot(weighted_in_degree_table, aes(x = Node, y = Weighted_In_Degree_Centrality)) +
+  geom_point(color = "#d581c4", size = 0.5) + # Punkte im Scatter Plot
+  theme_minimal() + # Minimalistisches Theme für den Plot
+  labs(title = "Verteilung der gewichteten In-Degree-Zentralität",
+       x = "Knoten-ID",
+       y = "Gewichtete In-Degree-Zentralität") +
+  scale_x_discrete(breaks = NULL) + 
+  theme(axis.text.x = element_blank()) 
+
+# Ausgabe der Top 3 Knoten nach gewichteter In-Degree-Zentralität
+top_3_weighted_in_degree <- head(weighted_in_degree_table, 3)
+print(top_3_weighted_in_degree)
+```
+
+Somit zeigt der Nutzer mit der ID 28 die höchste gewichtete In-Degree-Zentralität, also den höchsten Vertrauenswert, in Juni 2011 im Netzwerk.
+Nun werden die positiven und negativen eingehenden Bewertungen analysiert, die diesen Nutzer erreichen, sowie die Ursprungs-Nutzer, von denen die Bewertungen ausgehen.
+
+```{r, fig.width=15, fig.height=15}
+target_node <- 28
+# Eingehende Kanten
+incoming_edges <- E(g_june_2011)[ends(g_june_2011, E(g_june_2011))[, 2] == target_node]
+
+# Tabelle der eingehenden Kanten
+incoming_edges_table <- data.frame(
+  From = ends(g_june_2011, incoming_edges)[, 1], # IDs der Knoten, die zu target_node führen
+  To = ends(g_june_2011, incoming_edges)[, 2],   # Zielknoten, in diesem Fall immer 28
+  Weight = E(g_june_2011)$weight[incoming_edges]  # Gewicht der Kanten
+)
+print(incoming_edges_table)
+
+# Subgraphen
+subgraph_incoming <- make_empty_graph()  
+subgraph_incoming <- add_vertices(subgraph_incoming, n = 1, name = as.character(target_node))  
+for (i in seq_along(incoming_edges)) {
+  subgraph_incoming <- add_vertices(subgraph_incoming, n = 1, name = as.character(incoming_edges_table$From[i]))
+  subgraph_incoming <- add_edges(subgraph_incoming, c(as.character(incoming_edges_table$From[i]), as.character(target_node)), 
+                                  weight = incoming_edges_table$Weight[i])
+}
+
+plot(
+  subgraph_incoming,
+  vertex.size = 10,              
+  vertex.label = V(subgraph_incoming)$name, 
+  vertex.color = ifelse(V(subgraph_incoming)$name == as.character(target_node), "#d581c4", "skyblue"), 
+  edge.arrow.size = 0.5,        
+  edge.width = abs(E(subgraph_incoming)$weight) / 2,  
+  edge.color = ifelse(E(subgraph_incoming)$weight > 0, "#43c843", "red"),  
+  main = paste("Eingehende Verbindungen zu Knoten", target_node) 
+)
+```
+Da es keine negativen Bewertungen dem Graphen zu entnehmen sind, wird es zusätzlich untrersucht, ob es tatsächlich keine negativen Bewertungen gibt. 
+```{r}
+# negative Bewertungen
+negative_incoming_edges <- incoming_edges[E(g_june_2011)$weight[incoming_edges] < 0]
+
+if (length(negative_incoming_edges) > 0) {
+  cat("Es gibt negative eingehende Bewertungen für Knoten", target_node, "\n")
+} else {
+  cat("Es gibt keine negativen eingehenden Bewertungen für Knoten", target_node, "\n")
+}
+```
+
+### 3.3.2 Betweenness-Centrality
+Im nächsten Schritt erfolgt die Berechnung der Betweenness-Zentralität für den Monat mit dem höchsten Vertrauen, um die Nutzer zu identifizieren, die eine Schlüsselrolle als Vermittler einnehmen. 
+Dafür werden die negative Bewertungen zu den positiven konvertiert, um die Berechnung nicht zu verzerren. 
+```{r}
+# negative -> positive
+E(g_june_2011)$adjusted_weight <- ifelse(E(g_june_2011)$weight < 0, abs(1 / E(g_june_2011)$weight), E(g_june_2011)$weight)
+# Betweenness-Zentralität
+betweenness_centrality <- betweenness(g_june_2011, weights = E(g_june_2011)$adjusted_weight)
+V(g_june_2011)$betweenness_centrality <- betweenness_centrality
+
+# Tabelle
+betweenness_table <- data.frame(
+  Node = V(g_june_2011)$name,
+  Betweenness_Centrality = betweenness_centrality
+)
+# Tabelle in absteigender Reihenfolge
+betweenness_table <- betweenness_table[order(-betweenness_table$Betweenness_Centrality), ]
+
+ggplot(betweenness_table, aes(x = Node, y = Betweenness_Centrality)) +
+  geom_point(color = "#9024b4", size = 0.5) + # Punkte im Scatter Plot
+  theme_minimal() + # Minimalistisches Theme für den Plot
+  labs(title = "Verteilung der Betweenness-Zentralität",
+       x = "Knoten-ID",
+       y = "Betweenness-Zentralität") +
+  scale_x_discrete(breaks = NULL) + 
+  theme(axis.text.x = element_blank())
+
+# Top 3 
+top_3_betweenness <- betweenness_table[order(-betweenness_table$Betweenness_Centrality), ][1:3, ]
+print(top_3_betweenness)
+```
+Die höchste Betweenness-Zentralität hat der Nutzer mit der ID 7564.
+Dieser Nutzer nimmt eine Schlüsselrolle als Vermittler im Netzwerk ein, da er eine hohe Anzahl von kürzesten Pfaden zwischen anderen Nutzern vermittelt.
+Zur Veranschalulichug wird eine Visualisierung eines Untergraphs erstellt, der alle direkten Verbindungen des Nutzers mit der ID ID 7564 sowie die indirekten Verbindungen seiner Nachbarknoten umfasst. 
+
+```{r, fig.width=15, fig.height=15}
+target_node <- 7564
+
+# Verbindungen (Eingehende und Ausgehende)
+direct_neighbors <- unique(c(
+  ends(g_june_2011, E(g_june_2011))[, 1][ends(g_june_2011, E(g_june_2011))[, 2] == target_node],
+  ends(g_june_2011, E(g_june_2011))[, 2][ends(g_june_2011, E(g_june_2011))[, 1] == target_node]
+))
+
+# Nachbarn der Nachbarn
+indirect_neighbors <- unique(unlist(ends(g_june_2011, E(g_june_2011))[ends(g_june_2011, E(g_june_2011))[, 1] %in% direct_neighbors, 2]))
+
+# Subgraph
+subgraph <- induced_subgraph(g_june_2011, c(target_node, direct_neighbors, indirect_neighbors))
+
+plot(
+  subgraph,
+  vertex.size = ifelse(V(subgraph)$name == target_node, 6, 
+                       ifelse(V(subgraph)$name %in% direct_neighbors, 3, 2)),  
+  vertex.label = NA,  
+  vertex.color = ifelse(V(subgraph)$name == target_node, "#9024b4", 
+                ifelse(V(subgraph)$name %in% direct_neighbors, "orange", "yellow")),  
+  main = paste("Knoten:", target_node, "und seine Verbindungen (inklusive positiver und negativer Bewertungen)"), 
+  edge.arrow.size = 0.5,  
+  edge.width = 2,  
+  edge.color = ifelse(E(subgraph)$weight > 0, "#43c843", "red") 
+)
+
+# Legende
+legend("topright", legend = c("Zielknoten", "Direkte Nachbarn", "Indirekte Nachbarn"), 
+       col = c("#9024b4", "orange", "yellow"), pch = 16, pt.cex = 1.5, bty = "n")
+
+```
+
+
+### 3.3.3 gewichtete In-Closeness-Zentralität
+Als letzte Zentralitätsmaß wird die Closeness-Zentralität berechnet, um die Nutzer zu identifizieren, 
+die zentral für die Verbreitung von vertrauensvoller Informationen sind.
+In Rahmen dieser Arbeit wird die gewichtete In-Closeness-Zentralität berechnet und somit die Nutzer identifiziert, die schnell positiv bewertet werden und somit über eingehende Verbindungen leicht erreicht werden kann.
+
+```{r}
+g_june_positive <- subgraph.edges(g_june_2011, E(g_june_2011)[weight > 0])
+in_closeness_centrality <- igraph::closeness(g_june_positive, mode = "in", weights = E(g_june_positive)$weight)
+
+# Tabelle
+centrality_df <- data.frame(
+  Node = V(g_june_positive)$name, 
+  In_Closeness_Centrality = in_closeness_centrality)
+
+# NA-Werte entfernen
+centrality_df_valid <- centrality_df[!is.na(centrality_df$In_Closeness_Centrality), ]
+
+# Tabelle in absteigender Reihenfolge
+centrality_df_valid <- centrality_df_valid[order(-centrality_df_valid$In_Closeness_Centrality), ]
+
+ggplot(centrality_df_valid, aes(x = Node, y = In_Closeness_Centrality)) +
+  geom_point(color = "#8f0303", size = 0.5) + 
+  theme_minimal() + 
+  labs(title = "Verteilung der gewichteten In-Closeness-Zentralität",
+       x = "Knoten-ID",
+       y = "Gewichtete In-Closeness-Zentralität") +
+  scale_x_discrete(breaks = NULL) + 
+  theme(axis.text.x = element_blank())
+
+# Top 3 
+top_3_nodes <- centrality_df_valid[order(-centrality_df_valid$In_Closeness_Centrality), ][1:3, ]
+cat("Top 3 Knoten mit der höchsten In-Closeness Centrality:\n")
+print(top_3_nodes)
+
+# Top 30
+top_30_nodes <- centrality_df_valid[order(-centrality_df_valid$In_Closeness_Centrality), ][1:30, ]
+cat("Top 30 Knoten mit der höchsten In-Closeness Centrality:\n")
+print(top_30_nodes)
+```
+Die Nutzer mit den IDs 1955,934,236, 774, 419, 509, 2689, 1086, 1696, 2081, 2083, 1463, 2054, 1603, 1956, 2578, 1976, 129, 2608, 2563, 2635, 2597 
+haben den höchsten In-Closeness-Centrality-Wert.
+Diese Knoten werde innerhalb des gesamten netzwerks hervirgehoben, um zu sehen, wie sie mit anderen Nutzern verbunden sind.
+```{r, fig.width=15, fig.height=15}
+node_colors <- rep("gray", vcount(g_june_positive))
+
+# Knoten, die den Wert 1 haben
+node_colors[which(centrality_df_valid$In_Closeness_Centrality == 1)] <- "#8f0303"
+
+plot(g_june_positive,
+     vertex.color = node_colors,
+     vertex.size = 2,  
+     edge.color = "#43c843", 
+     edge.arrow.size = 0.5, 
+     main = "Netzwerk mit hervorgehobenen Knoten (In-Closeness-Centrality = 1)",
+     layout = layout_with_fr,  
+     vertex.label = NA) 
+```
+
+## 3.3.4 Louvain-Algorithmus
+Der Louvain-Algorithmus wird verwendet, um Gemeinschaften im Netzwerk zu identifizieren, die eine hohe Vertrauenswürdigkeit aufweisen.
+Deswegen werden nur die positiven Verbindungen berücksichtigt.
+Für die Clusterbildung wird das Netzwerk ungerichtet gemacht.
+
+```{r, fig.width=15, fig.height=15}
+# positive Bewertungen
+g_positive <- subgraph.edges(g_june_2011, E(g_june_2011)[E(g_june_2011)$weight > 0], delete.vertices = FALSE)
+# ungerichteter Graph
+g_positive_undirected <- as.undirected(g_positive, mode = "each")
+
+# Cluster-Identifikation 
+clusters <- cluster_louvain(g_positive_undirected)
+V(g_positive_undirected)$cluster <- membership(clusters)
+
+plot(g_positive_undirected, vertex.color = V(g_positive_undirected)$cluster + 1,  # Cluster-ID als Farbe verwenden
+     vertex.size = 2,
+     vertex.label.cex = 0.7,
+     vertex.label = NA, 
+     edge.arrow.size = 0.5,
+     main = "Cluster-Identifikation mit Louvain-Algorithmus")
+
+# Anzahl der Knoten in jedem Cluster an
+print(table(clusters$membership))  
+# Größe jedes Clusters
+cluster_sizes <- table(clusters$membership)
+
+# Tabelle
+cluster_analysis <- data.frame(
+  Cluster = 1:max(clusters$membership),
+  Size = as.numeric(cluster_sizes)
+)
+
+# Tabelle in absteigender Reihenfolge
+top_clusters <- cluster_analysis[order(-cluster_analysis$Size), ]
+
+# Top 3 
+top_3_clusters <- head(top_clusters, 3)
+print(top_3_clusters)
+```
+Auf der Grundlage der Größe der einzelnen Cluster wurde Top 3 größte Cluster festgestellt.
+Nun wird der größte Cluster genauer untersucht, um zu sehen, wie die Knoten in diesem Cluster miteinander verbunden sind.
+
+```{r, fig.width=15, fig.height=15}
+# Top 1
+cluster_id <- top_3_clusters$Cluster[1]
+
+# Knoten im Cluster
+nodes_in_cluster <- V(g_positive_undirected)[clusters$membership == cluster_id]
+# Subgraph
+g_cluster <- subgraph(g_positive_undirected, nodes_in_cluster)
+
+cat("Anzahl der Knoten im Cluster:", vcount(g_cluster), "\n")
+cat("Anzahl der Kanten im Cluster:", ecount(g_cluster), "\n")
+
+plot(g_cluster,
+  vertex.color = clusters$membership[nodes_in_cluster],  # Cluster-ID als Farbe verwenden
+  vertex.size = 3,
+  vertex.label = NA,
+  edge.arrow.size = 0.5,
+  edge.width = E(g_cluster)$weight / max(E(g_cluster)$weight) * 5,
+  edge.color = "#43c843",
+  main = paste("Visualisierung von Cluster", cluster_id))
+```
+
+# 4. Fazit
+Für die Grundlage der Untersuchung wurde der Monat Juni 2011 ausgewählt, da in diesem Monat das höchste Vertrauen im Bitcoin Alpha Netzwerk erreicht wurde.
+Die Analyse des Bitcoin Alpha Netzwerks im Monat Juni 2011 hat gezeigt, dass es unterschiedliche zentrale Nutzer gibt, die eine zentrale Rolle in dem Monat mit dem höchsten Vertrauen spielen. 
+$\\$
+Zum einen genießt der Nutzer mit der ID 28 das höchste Vertrauen, da er die höchste gewichtete In-Degree-Zentralität aufweist.
+Zum anderen hat der Nutzer mit der ID 7564 die höchste Betweenness-Zentralität, was bedeutet, dass er eine Schlüsselrolle als Vermittler im Netzwerk einnimmt.
+Ebenfalls haben die Nutzer mit den IDs 1955, 934, 236, 774, 419, 509, 2689, 1086, 1696, 2081, 2083, 1463, 2054, 1603, 1956, 2578, 1976, 129, 2608, 2563, 2635, 2597 die höchste In-Closeness-Zentralität. 
+Dies deutet darauf hin, dass sie leicht erreichbar sind und schnell positive Bewertungen abgeben.
+Außerdem wurden die Gemeinschaften im Netzwerk mithilfe des Louvain-Algorithmus identifiziert.
+Die Analyse hat somit das übergeordnete Ziel erreicht, Schlüsselpersonen und Gruppe zu identifizieren, die durch ihre
+Positionen oder Interaktionen einen maßgeblichen Einfluss auf das Gesamtnetzwerk ausüben könnten.
+$\\$
+Durch die Identifikation zentraler Nutzer, die als Vermittler fungieren, können andere Nutzer besser verstehen, wem sie vertrauen können. 
+Diese Erkenntnisse können Nutzern helfen, informiertere Entscheidungen über Transaktionen zu treffen und Risiken zu minimiere
+Die Analyse von zentralen Akteuren und Gemeinschaften kann auch helfen, potenzielle Betrüger zu identifizieren. 
+
+# 5. Ausblickt
+Aufgrund der hohen Anzahl an Knoten und Kanten gestaltet sich die Visualisierung des gesamten Netzwerks als herausfordernd. 
+Daher wurde der Monat mit dem höchsten Vertrauen ausgewählt.
+Eine weiterführende Untersuchung könnte darauf abzielen, den Monat mit dem höchsten Misstrauen zu analysieren.
+Weiter Ansätze beinhalten die Untersuchung der Out-Degree-Zentralität, um zu untersuchen, wie viele positive oder negative Bewertungen ein Nutzer anderen gegeben hat.
+Ebenfalls könnte die Out-Closeness-Zentralität analysiert werden, um zu sehen, wie schnell ein Nutzer andere Nutzer im Netzwerk durch seine ausgehenden Verbindungen erreichen kann
+Außerdem könnte die Zentralitätsmaße und Clusterstrukturen über mehrere Zeiträume dabei helfen, saisonale oder längerfristige Trends in den Vertrauensbeziehungen zu identifizieren. 
+Durch diese erweiterte Analyse würde die bestehende Analyse aussagekräftiger werden, da sie eine umfassende Sich auf das Vertrauensnetzwerk ermöglicht hätte.
+
+# 6. Literaturverzeichnis 
+Islam, Md. Jahidul; Islam, Md. Rakibul; Basar, Md. Abul 2024. »iTrustBD: Study and Analysis of Bitcoin Networks to Identify the Influence of Trust Behavior Dynamics«, in SN Computer Science 5, 5, S. 476.$\\$
+$\\$
+SNAP: Signed network datasets: Bitcoin Alpha web of trust network, https://snap.stanford.edu/data/soc-sign-bitcoin-alpha.html (Zugriff vom 28.10.2024)$\\$
+$\\$
+Edwards, John. Bitcoin’s Price History, https://www.investopedia.com/articles/forex/121815/bitcoins-price-history.asp (Zugriff vom 29.10.2024).
+
+
+
+
+
+
+
+
+
+
+
+
