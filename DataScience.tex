@@ -847,6 +847,47 @@ Wettbewerbssituation von Unternehmen basiert\ldots{}
 \pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-11-1.pdf}}
 \ldots{}
 
+\section{Bloß direkte Wettbewerber}\label{blouxdf-direkte-wettbewerber}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Extrahiere Unternehmen und ihre Wettbewerber}
+\NormalTok{edges }\OtherTok{\textless{}{-}}\NormalTok{ data }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(Competitors) }\SpecialCharTok{\&}\NormalTok{ Competitors }\SpecialCharTok{!=} \StringTok{"{-}1"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{separate\_rows}\NormalTok{(Competitors, }\AttributeTok{sep =} \StringTok{", "}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{select}\NormalTok{(}\StringTok{\textasciigrave{}}\AttributeTok{Company Name}\StringTok{\textasciigrave{}}\NormalTok{, Competitors) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{rename}\NormalTok{(}\AttributeTok{from =} \StringTok{\textasciigrave{}}\AttributeTok{Company Name}\StringTok{\textasciigrave{}}\NormalTok{, }\AttributeTok{to =}\NormalTok{ Competitors) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{weight =} \DecValTok{1}\NormalTok{)  }\CommentTok{\# Gewichtung für direkte Wettbewerber}
+
+\CommentTok{\# Summiere die Gewichtungen für mehrere Kanten zwischen denselben Punkten}
+\NormalTok{edge\_weights }\OtherTok{\textless{}{-}}\NormalTok{ edges }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{group\_by}\NormalTok{(from, to) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{summarise}\NormalTok{(}\AttributeTok{weight =} \FunctionTok{sum}\NormalTok{(weight), }\AttributeTok{.groups =} \StringTok{\textquotesingle{}drop\textquotesingle{}}\NormalTok{)}
+
+\CommentTok{\# Erstelle den Graphen nur mit direkten Wettbewerbern}
+\NormalTok{g\_competitors }\OtherTok{\textless{}{-}} \FunctionTok{graph\_from\_data\_frame}\NormalTok{(edge\_weights, }\AttributeTok{directed =} \ConstantTok{FALSE}\NormalTok{)}
+
+\CommentTok{\# Setze die Gewichtungen der Kanten im Graphen}
+\FunctionTok{E}\NormalTok{(g\_competitors)}\SpecialCharTok{$}\NormalTok{weight }\OtherTok{\textless{}{-}}\NormalTok{ edge\_weights}\SpecialCharTok{$}\NormalTok{weight}
+
+\CommentTok{\# Setze die Farben der Kanten basierend auf der Gewichtung}
+\FunctionTok{E}\NormalTok{(g\_competitors)}\SpecialCharTok{$}\NormalTok{color }\OtherTok{\textless{}{-}} \StringTok{"red"}
+
+\CommentTok{\# Visualisiere das Netzwerk mit kleineren Knoten}
+\FunctionTok{plot}\NormalTok{(g\_competitors, }\AttributeTok{vertex.label =} \ConstantTok{NA}\NormalTok{,}
+     \AttributeTok{vertex.size =} \DecValTok{3}\NormalTok{,  }\CommentTok{\# Kleinere Knoten}
+     \AttributeTok{edge.width =} \DecValTok{2} \SpecialCharTok{*} \FunctionTok{E}\NormalTok{(g\_competitors)}\SpecialCharTok{$}\NormalTok{weight,  }\CommentTok{\# Gewichtung der Kanten}
+     \AttributeTok{edge.arrow.size =} \DecValTok{1}\NormalTok{,}
+     \AttributeTok{main =} \StringTok{"Unternehmensnetzwerk basierend auf direkten Wettbewerbern"}\NormalTok{,}
+     \AttributeTok{layout =}\NormalTok{ layout\_with\_fr}
+\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-12-1.pdf}}
+
+Ausgabe der stark vernetzten Unternehmen?\ldots{}
+
 \subsection{Zentralitätsanalyse innerhalb der
 Netzwerke}\label{zentralituxe4tsanalyse-innerhalb-der-netzwerke}
 
@@ -886,11 +927,11 @@ Netzwerke}\label{zentralituxe4tsanalyse-innerhalb-der-netzwerke}
 \toprule
 Company & Betweenness\\
 \midrule
-\cellcolor{gray!10}{Saama Technologies Inc} & \cellcolor{gray!10}{25426.13}\\
-Accenture & 17022.28\\
-\cellcolor{gray!10}{IBM} & \cellcolor{gray!10}{14640.00}\\
-Motorola Solutions & 14570.00\\
-\cellcolor{gray!10}{ManTech} & \cellcolor{gray!10}{9039.75}\\
+\cellcolor{gray!10}{Booz Allen Hamilton} & \cellcolor{gray!10}{830}\\
+Gallup & 749\\
+\cellcolor{gray!10}{McKinsey \& Company} & \cellcolor{gray!10}{713}\\
+PA Consulting & 704\\
+\cellcolor{gray!10}{General Dynamics Information Technology} & \cellcolor{gray!10}{695}\\
 \bottomrule
 \end{tabular}
 
@@ -918,11 +959,11 @@ Motorola Solutions & 14570.00\\
 \toprule
 Company & Degree\\
 \midrule
-\cellcolor{gray!10}{New England Biolabs} & \cellcolor{gray!10}{35}\\
-Nektar Therapeutics & 35\\
-\cellcolor{gray!10}{Sunovion} & \cellcolor{gray!10}{35}\\
-Saama Technologies Inc & 35\\
-\cellcolor{gray!10}{IQVIA} & \cellcolor{gray!10}{35}\\
+\cellcolor{gray!10}{Accenture} & \cellcolor{gray!10}{7}\\
+AstraZeneca & 5\\
+\cellcolor{gray!10}{Infosys} & \cellcolor{gray!10}{5}\\
+Booz Allen Hamilton & 5\\
+\cellcolor{gray!10}{BioMarin Pharmaceutical} & \cellcolor{gray!10}{4}\\
 \bottomrule
 \end{tabular}
 
@@ -950,11 +991,11 @@ Saama Technologies Inc & 35\\
 \toprule
 Company & Eigenvector\\
 \midrule
-\cellcolor{gray!10}{AstraZeneca} & \cellcolor{gray!10}{1.0000000}\\
-Novartis & 0.9864565\\
-\cellcolor{gray!10}{Exelixis} & \cellcolor{gray!10}{0.9863625}\\
-GSK & 0.9639767\\
-\cellcolor{gray!10}{BioMarin Pharmaceutical} & \cellcolor{gray!10}{0.9623126}\\
+\cellcolor{gray!10}{Takeda Pharmaceuticals} & \cellcolor{gray!10}{1.0000000}\\
+Novartis & 0.6885416\\
+\cellcolor{gray!10}{Pfizer} & \cellcolor{gray!10}{0.5750772}\\
+Baxter & 0.5510613\\
+\cellcolor{gray!10}{AstraZeneca} & \cellcolor{gray!10}{0.3694600}\\
 \bottomrule
 \end{tabular}
 
@@ -983,16 +1024,6 @@ Peripherien}\label{gehaltsverteilung-in-netzwerkzentren-und-peripherien}
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\NormalTok{webshot}\SpecialCharTok{::}\FunctionTok{install\_phantomjs}\NormalTok{()}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{verbatim}
-## phantomjs has been installed to /Users/maxzeitler/Library/Application Support/PhantomJS
-\end{verbatim}
-
-\begin{Shaded}
-\begin{Highlighting}[]
 \CommentTok{\# Prepare data for visNetwork}
 \NormalTok{nodes }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}\AttributeTok{id =} \FunctionTok{V}\NormalTok{(g\_competitors)}\SpecialCharTok{$}\NormalTok{name,}
                     \AttributeTok{label =} \FunctionTok{V}\NormalTok{(g\_competitors)}\SpecialCharTok{$}\NormalTok{name,}
@@ -1006,33 +1037,36 @@ Peripherien}\label{gehaltsverteilung-in-netzwerkzentren-und-peripherien}
 \NormalTok{edges }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}\AttributeTok{from =} \FunctionTok{as.character}\NormalTok{(edges}\SpecialCharTok{$}\NormalTok{from), }\AttributeTok{to =} \FunctionTok{as.character}\NormalTok{(edges}\SpecialCharTok{$}\NormalTok{to))}
 
 \CommentTok{\# Create interactive network visualization}
-\NormalTok{vis }\OtherTok{\textless{}{-}} \FunctionTok{visNetwork}\NormalTok{(nodes, edges) }\SpecialCharTok{\%\textgreater{}\%}
+\FunctionTok{visNetwork}\NormalTok{(nodes, edges) }\SpecialCharTok{\%\textgreater{}\%}
   \FunctionTok{visOptions}\NormalTok{(}\AttributeTok{highlightNearest =} \ConstantTok{TRUE}\NormalTok{, }\AttributeTok{nodesIdSelection =} \ConstantTok{TRUE}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
   \FunctionTok{visGroups}\NormalTok{(}\AttributeTok{groupname =} \StringTok{"1"}\NormalTok{, }\AttributeTok{color =} \StringTok{"red"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
   \FunctionTok{visGroups}\NormalTok{(}\AttributeTok{groupname =} \StringTok{"2"}\NormalTok{, }\AttributeTok{color =} \StringTok{"blue"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
   \FunctionTok{visGroups}\NormalTok{(}\AttributeTok{groupname =} \StringTok{"3"}\NormalTok{, }\AttributeTok{color =} \StringTok{"green"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
   \FunctionTok{visLayout}\NormalTok{(}\AttributeTok{randomSeed =} \DecValTok{123}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
   \FunctionTok{visLegend}\NormalTok{()}
-
-\FunctionTok{visSave}\NormalTok{(vis, }\AttributeTok{file =} \StringTok{"network.html"}\NormalTok{)}
-
-\CommentTok{\# Convert HTML to image}
-\FunctionTok{webshot}\NormalTok{(}\StringTok{"network.html"}\NormalTok{, }\AttributeTok{file =} \StringTok{"network.png"}\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-17-1.png}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-18-1.pdf}}
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\CommentTok{\# Include the image in the PDF}
-\NormalTok{knitr}\SpecialCharTok{::}\FunctionTok{include\_graphics}\NormalTok{(}\StringTok{"network.png"}\NormalTok{)}
+\CommentTok{\# Fügt ein Bild der interaktiven Netzwerkvisualisierung hinzu}
+\NormalTok{knitr}\SpecialCharTok{::}\FunctionTok{include\_graphics}\NormalTok{(}\StringTok{"interaktive\_Netzwerke\_Bilder/Übersicht.png"}\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{network.png}} Zugriff
-auf die interaktive Visualisierung über das Repository (Dateiname:
-network.html): \url{https://github.com/Mzaex7/SNA}
+\pandocbounded{\includegraphics[keepaspectratio]{interaktive_Netzwerke_Bilder/Übersicht.png}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{knitr}\SpecialCharTok{::}\FunctionTok{include\_graphics}\NormalTok{(}\StringTok{"interaktive\_Netzwerke\_Bilder/NVDIA.png"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\pandocbounded{\includegraphics[keepaspectratio]{interaktive_Netzwerke_Bilder/NVDIA.png}}
+Zugriff auf die interaktive Visualisierung über das Repository
+(Dateiname: network.html): \url{https://github.com/Mzaex7/SNA}
 
 \subsection{Erste Copilot iteration}\label{erste-copilot-iteration}
 
@@ -1057,7 +1091,7 @@ welche Rolle sie im Jobmarkt spielen. \#Degree distribution
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-18-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-19-1.pdf}}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -1068,7 +1102,7 @@ welche Rolle sie im Jobmarkt spielen. \#Degree distribution
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-18-2.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-19-2.pdf}}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -1081,7 +1115,7 @@ welche Rolle sie im Jobmarkt spielen. \#Degree distribution
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-18-3.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-19-3.pdf}}
 
 \subsection{Zweite Copilot iteration}\label{zweite-copilot-iteration}
 
@@ -1108,7 +1142,7 @@ welche Rolle sie im Jobmarkt spielen. \#Degree distribution
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-19-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-20-1.pdf}}
 
 \newpage
 
