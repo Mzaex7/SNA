@@ -1,5 +1,6 @@
 ---
-title: "Das Berufsbild des Data Scienctisten aufgeschlüsselt"
+title: "Einfluss der Wettbewerbsstruktur auf Gehaltsniveaus im Data Science-Bereich:" 
+subtitle: "Eine Social Network Analyse"
 output:
   pdf_document:
     toc: true
@@ -27,7 +28,7 @@ Zunächst müssen die benötigten Bibliotheken installiert werden:
 - $ install.packages("kableExtra")
 - $ install.packages("webshot")
 - $ install.packages("knitr")
-
+- $ install.packages("ggplot2")
 
 Und anschließend geladen werden:
 ```{r setup, message=FALSE, warning=FALSE}
@@ -39,6 +40,7 @@ library(tidyr)
 library(knitr)
 library(kableExtra)
 library(webshot)
+library(ggplot2)
 ```
 
 
@@ -223,6 +225,8 @@ Darüber hinaus werden gemeinsame Unternehmen in beiden Netzwerken sowie die Geh
 \newpage
 # Analyse
 ## Datenbereinigung
+
+### Bereinigung für die geografische Analyse
 Bei der Durchsicht des Datensatzes viel auf, dass die Spalten "Same State" und "job_state" von der Logik her ähnlich sind.
 Dies soll nun näher unterucht werden, um spätere Fehler vorzubeugen, vor allem bei den geografischen Netzwerken vorzubeugen.
 
@@ -234,7 +238,9 @@ selected_data <- data %>%
 # Heading der ausgewählten Spalten
 head(selected_data, 15)
 ```
+
 Sieht so aus, als wäre beide Spalten identisch. Dies soll jedoch zur Probe gestellt werden:
+
 ```{r}
 if (all(selected_data$State == selected_data$job_state, na.rm = TRUE)) {
   print("Alle Werte in 'State' und 'job_state' sind identisch.")
@@ -242,7 +248,9 @@ if (all(selected_data$State == selected_data$job_state, na.rm = TRUE)) {
   print("Es gibt Unterschiede zwischen 'State' und 'job_state'.")
 }
 ```
+
 Jedoch trügt der Schein, da es Unterschiede gibt.
+
 ```{r}
 # Auswahl der Zeilen, in denen "State" und "job_state" unterschiedlich sind
 different_states <- selected_data %>%
@@ -250,6 +258,7 @@ different_states <- selected_data %>%
 
 print(different_states, n = Inf)
 ```
+
 Es fällt auf, das LA und Los Angeles nicht einheitlich verwendet werden. Außerdem ist Los Angeles kein eigener Bundesstaat, sonder ein Teil von Kalifornien(CA). Dies soll nun korrigiert werden.
 
 Außerdem sollte bei weieren Vorgehen beachtet werden, dass Werte wie "Na" oder "-1" vor den Analysen entfernt werden sollten.
@@ -274,12 +283,65 @@ if (all(selected_data$State == selected_data$job_state, na.rm = TRUE)) {
 }
 ```
 
+### Überprüfung auf weitere fehlende Werte
+
+```{r}
+# Überprüfen auf NA-Werte
+
+na_counts <- colSums(is.na(data))
+print("Anzahl der NA-Werte pro Spalte:")
+print(na_counts)
+
+# Überprüfen auf -1-Werte
+neg_one_counts <- sapply(data, function(x) sum(x == -1, na.rm = TRUE))
+print("Anzahl der -1-Werte pro Spalte:")
+print(neg_one_counts)
+```
+
+Es zeigt sich, dass es keine NA-Werte gibt, jedoch einige -1-Werte, die entfert werden sollten.
+
+```{r}
+# Entfernen von Zeilen mit -1 Werten
+data <- data %>%
+  filter_all(all_vars(. != -1))
+
+# Überprüfen auf -1-Werte nach Entfernung
+neg_one_counts <- sapply(data, function(x) sum(x == -1, na.rm = TRUE))
+print("Anzahl der -1 Werte pro Spalte:")
+print(neg_one_counts)
+```
+
+### Entfernen irrelevanter Spalten
+Basierend auf der Analysestrategie und den geplanten Analysen werden jetzt noch die Spalten, 
+die nicht für die anfängliche geografische Analyse und die nachfolgende Wettbewerbsanalyse 
+benötigt werden, entfernt.
+```{r}
+# Entfernen irrelevanter Spalten
+# Job Description, Rating, Headquarters, Size, Founded, Type of ownership, Sector, Revenue und Skills
+data <- data %>%
+  select(-c(`Job Description`, Rating, Headquarters, Size, Founded, `Type of ownership`, Sector, Revenue,
+            Python_yn, `R Studio`, Spark, AWS_yn, Excel_yn))
+
+# Ausgeben der noch enthaltenen Spalten
+print(data %>% names())
+
+```
 
 Nachdem die Bereinigung des Datensatzes abgeschlossen ist, kann mit der Analyse begonnen werden.
 
+
+
 ## Netzwerkbildung und Visualisierung
-### Geografisches Netzwerk
-Nun soll ein Netzwerk erstellt werden, welches auf der geografischen Nähe von Unternehmen basiert...
+### Geografische Vorbetrachtung
+Da bei der Betrachtung der Wettbewerbsstruktur die geografische Nähe von Unternehmen auch eine Rolle spielen kann, 
+soll zunächst ein Netzwerk erstellt werden, das auf der geografischen Nähe von Unternehmen basiert. 
+Diese annahme beruht darauf, dass Unternehmen in derselben Region wahrscheinlich ähnliche Gehälter anbieten.
+Dies soll Überprüft werden um diese Arbeit um eine weiter Dimension zu erweitern.
+
+#### Erstellung eines Geografischen Netzwerkes
+Die Gewichtung erfolgt linear, wobei jeder Standort eine Grundgröße von 3 hat, und für jedes Unternehmen an diesem Standort wird die Größe um 0.5 erhöht.
+Ab einer Größe von 4.5 wird die Farbe des Standorts geändert, um die Standorte mit mehreren Unternehmen hervorzuheben.
+
 ```{r, fig.height=15, fig.width=15}
 # Aus Gründen der Sichtbarkeit, werden bloß Locations mit mehr als einem
 # Unternehmen dargestellt.
@@ -310,19 +372,17 @@ location_colors <- rainbow(nrow(location_counts))
 
 # Set vertex size based on the number of companies at each location
 vertex_sizes <- ifelse(V(network_geo)$name %in% location_counts$Location,
-                       sqrt(location_counts$Company_Count[
+                       3 + location_counts$Company_Count[
                          match(V(network_geo)$name, location_counts$Location)
-                       ]) * 2,
+                       ] * 0.5,  # Linear scaling factor with minimum size 3
                        3) # Default size for companies
 
 # Assign colors and sizes to vertices
 V(network_geo)$size <- vertex_sizes
-V(network_geo)$color <- ifelse(V(network_geo)$name %in% filtered_edges$Company,
-                               company_colors,
-                               ifelse(vertex_sizes > 5,
-                                      location_colors[match(V(network_geo)$name,
-                                                            location_counts$Location)],
-                                      "grey"))
+V(network_geo)$color <- ifelse(V(network_geo)$name %in% location_counts$Location &
+                               vertex_sizes > 4.5,
+                               location_colors[match(V(network_geo)$name, location_counts$Location)],
+                               "grey")
 
 # Plot the network
 plot(network_geo,
@@ -333,9 +393,9 @@ plot(network_geo,
      layout = layout_with_fr,
 )
 
-# Add legend for locations with size > 5
+# Add legend for locations with size > 4.5
 location_indices <- match(location_counts$Location, V(network_geo)$name)
-large_locations <- location_counts$Location[vertex_sizes[location_indices] > 5]
+large_locations <- location_counts$Location[vertex_sizes[location_indices] > 4.5]
 
 large_location_colors <- location_colors[
   match(large_locations, location_counts$Location)
@@ -344,15 +404,80 @@ legend("topright",
        legend = large_locations,
        col = large_location_colors,
        pch = 19,
-       title = "Locations")
-
+       title = "Locations")       
 ```
-Es lässt sich erkennen, dass ...
+
+Wie zu erwarten war, sind die meisten Unternehmen Ballungszentren wie New York, Chicago und San Francisco angesiedelt.
+
+#### Vergleich der Gehälter zwischen den Hotspot- und den anderen Regionen
+```{r, fig.height=7, fig.width=8}
+# ausgabe der farbigen Standorte
+print(large_locations)
+
+# Filterung der Daten für die Hotspot-Regionen
+data_hotspots <- data %>%
+  filter(`Location` %in% large_locations)
+
+# Filterung der Daten für die anderen Regionen
+data_other <- data %>%
+  filter(!`Location` %in% large_locations)  
+
+# Durchschnittsgehalt in den Hotspot-Regionen
+avg_salary_hotspots <- mean(data_hotspots$`Salary Estimate`, na.rm = TRUE)
+
+# Durchschnittsgehalt in den anderen Regionen
+avg_salary_other <- mean(data_other$`Salary Estimate`, na.rm = TRUE)
+
+# Erstellung eines Balkendiagramms
+ggplot(data = data.frame(Region = c("Hotspot", "Other"),
+                         Average_Salary = c(avg_salary_hotspots,
+                                            avg_salary_other)),
+       aes(x = Region, y = Average_Salary, fill = Region)) +
+  geom_bar(stat = "identity", width = 0.6) +
+  scale_fill_manual(values = c("Hotspot" = "#FF5733", "Other" = "#33C3FF")) +
+  labs(title = "Average Salary in Hotspot vs. Other Regions",
+       x = "Region",
+       y = "Average Salary") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 18, face = "bold"),
+    axis.title.x = element_text(size = 16, face = "bold"),
+    axis.title.y = element_text(size = 16, face = "bold"),
+    axis.text.x = element_text(size = 16),
+    axis.text.y = element_text(size = 16),
+    legend.position = "none"
+  ) +
+  geom_text(aes(label = round(Average_Salary, 2)), vjust = -0.5, size = 6)
+```
+```{r}
+# Berechnung der Gehaltsunterschiede
+salary_diff <- avg_salary_hotspots - avg_salary_other
+
+# Ausgabe der Gehaltsunterschiede
+print(paste("Durchschnittsgehalt in Hotspot-Regionen:", avg_salary_hotspots))
+print(paste("Durchschnittsgehalt in anderen Regionen:", avg_salary_other))
+print(paste("Durchschnittlicher Gehaltsunterschied:", salary_diff))
+```
+Das Ergebniss zeigt, dass entsprechend der vorher getroffenen Annahme, die Gehälter in den Hotspot-Regionen im Durchschnitt höher sind als in anderen Regionen.
+Dies impliziert eine Korrelation zwischen geografischer Nähe und Gehaltsniveau.
+
+Deswegen sollen am Ende dieser Arbeit die Ergebnisse der Wettbewerbsanalyse mit den Ergebnissen der geografischen Analyse verglichen und in Bezug gesetz werden.
 
 
-### Wettbewerbsnetzwerk
+## Wettbewerbsnetzwerk
+In diesem Abschnitt wird mit der eigentlichen Analyse, dem Ziel dieser Arbeit, der Erstellung einer Wettbewerbsanalyse begonnen.
 
-Nun soll ein Netzwerk erstellt werden, welches auf der Wettbewerbssituation von Unternehmen basiert...
+Zu diesem Zweck wird ein Netzwerk erstellt, das auf den Wettbewerbsbeziehungen zwischen Unternehmen basiert. 
+
+Die Wettbewerbsbeziehungen werden anhand der in der Spalte "Competitors" aufgeführten Unternehmen definiert.
+Die Punkte im Netzwerk repräsentieren die Unternehmen, während die Kanten die Wettbewerbsbeziehungen zwischen ihnen darstellen.
+
+Die Gewichtung der Kanten erfolgt wie folgt:
+- Direkte Wettbewerber erhalten eine Gewichtung von 1.
+- Unternehmen in derselben Branche, jedoch nicht als direkte Wettbewerber aufgeführt, erhalten eine Gewichtung von 0.5.
+
+Branchenbezogene Wettbewerbsbeziehungen sind in blau dargestellt, während direkte Wettbewerber in rot hervorgehoben sind.
+
 ```{r, fig.height=15, fig.width=15}
 # Extrahiere Unternehmen und ihre Wettbewerber
 edges <- data %>%
@@ -379,8 +504,7 @@ g_competitors <- graph_from_data_frame(all_edges, directed = FALSE)
 
 # Entferne mehrere Kanten zwischen denselben Punkten
 g_competitors <- simplify(g_competitors, remove.multiple = TRUE,
-                          edge.attr.comb = "first"
-                          )
+                          edge.attr.comb = "first")
 
 # Setze die Farben der Kanten basierend auf der Gewichtung
 E(g_competitors)$color <- ifelse(E(g_competitors)$weight == 1, "red", "blue")
@@ -391,16 +515,18 @@ plot(g_competitors, vertex.label = NA,
      edge.width = E(g_competitors)$weight,  # Gewichtung der Kanten
      edge.arrow.size = 0.5,  # Kleinere Pfeile
      main = "Unternehmensnetzwerk basierend auf Wettbewerbern und Branchen",
-     layout = layout_with_fr
-)
+     layout = layout_with_fr)
 
 # Legende für Kantenfarben
 legend("topright", legend = c("Direct Competitors", "Same Industry"),
        fill = c("red", "blue")
        )
 ```
-...
 
+
+
+Da für den Zweck dieser Arbeit eine gemeinsamer Industriezweig, wie im Datensatz gegeben, keinen besseren Indikator für Wettbewerb darstellt, als 
+die Competitors-Spalte direkt, wird dieser Ansatz nicht weiter verfolgt. Ein Beispiel für so eine Situation wären zwei Unternehmen, die in der Medizinbranche tätig sind, jedoch in unterschiedlichen Bereichen, wie z.B. der Datenanalyse und der Medikamentenentwicklung.
 # Bloß direkte Wettbewerber
 ```{r, fig.height=15, fig.width=15}
 # Extrahiere Unternehmen und ihre Wettbewerber
@@ -417,18 +543,18 @@ edge_weights <- edges %>%
   summarise(weight = sum(weight), .groups = 'drop')
 
 # Erstelle den Graphen nur mit direkten Wettbewerbern
-g_competitors <- graph_from_data_frame(edge_weights, directed = FALSE)
+g_direct_competitors <- graph_from_data_frame(edge_weights, directed = FALSE)
 
 # Setze die Gewichtungen der Kanten im Graphen
-E(g_competitors)$weight <- edge_weights$weight
+E(g_direct_competitors)$weight <- edge_weights$weight
 
 # Setze die Farben der Kanten basierend auf der Gewichtung
-E(g_competitors)$color <- "red"
+E(g_direct_competitors)$color <- "red"
 
 # Visualisiere das Netzwerk mit kleineren Knoten
-plot(g_competitors, vertex.label = NA,
+plot(g_direct_competitors, vertex.label = NA,
      vertex.size = 3,  # Kleinere Knoten
-     edge.width = 2 * E(g_competitors)$weight,  # Gewichtung der Kanten
+     edge.width = 2 * E(g_direct_competitors)$weight,  # Gewichtung der Kanten
      edge.arrow.size = 1,
      main = "Unternehmensnetzwerk basierend auf direkten Wettbewerbern",
      layout = layout_with_fr
@@ -441,15 +567,20 @@ Ausgabe der stark vernetzten Unternehmen?...
 ## Zentralitätsanalyse innerhalb der Netzwerke
 ```{r}
 # Calculate network metrics
-betweenness_centrality <- betweenness(g_competitors)
-degree_centrality <- degree(g_competitors)
-eigenvector_centrality <- eigen_centrality(g_competitors)$vector
+betweenness_centrality <- betweenness(g_direct_competitors)
+degree_centrality <- degree(g_direct_competitors)
+eigenvector_centrality <- eigen_centrality(g_direct_competitors)$vector
 
-closeness_centrality <- closeness(g_competitors)
-clustering_coeff <- transitivity(g_competitors, type = "local")
+closeness_centrality <- closeness(g_direct_competitors)
+clustering_coeff <- transitivity(g_direct_competitors, type = "local")
 ```
 
 ### Betweenness-Zentralität
+Jetzt soll das igraph-Paket in R verwendet werden, um die Betweenness-Zentralität für jeden Knoten zu berechnen.
+Dies zeigt, wie oft ein Unternehmen auf dem kürzesten Weg zwischen anderen Unternehmen liegt.
+
+Unternehmen mit hoher Betweenness-Zentralität könnten als Brücke zwischen verschiedenen Netzwerken fungieren, 
+was einen Wettbewerbsvorteil und möglicherweise höhere Gehälter zur Folge hat.
 ```{r}
 # Berechne die Betweenness-Centrality und sortiere sie absteigend
 top_betweenness <- head(sort(betweenness_centrality, decreasing = TRUE), 5)
@@ -464,9 +595,22 @@ top_betweenness_df <- data.frame(
 # Erstelle die Tabelle und zentriere sie links
 kable(top_betweenness_df, format = "latex", booktabs = TRUE, align = "l") %>%
 kable_styling(latex_options = c("striped", "hold_position"), position = "left")
+
+# Create bar plot
+ggplot(top_betweenness_df, aes(x = reorder(Company, -Betweenness), y = Betweenness)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Top 5 Betweenness Centrality",
+       x = "Company",
+       y = "Betweenness Centrality") +
+  theme_minimal()
 ```
 
 ### Degree-Zentralität
+Hier wird die Anzahl der Kanten gezählt, die an jedem Knoten hängen. 
+Hohe Werte können auf starke Verbindungen zu anderen Unternehmen hinweisen.
+
+Ein Unternehmen mit einer hohen Degree-Zentralität ist in der Regel gut vernetzt und könnte in der Lage sein, 
+bessere Gehälter zu zahlen, um Talente anzuziehen.
 ```{r}
 # Berechne die Degree-Centrality und sortiere sie absteigend
 top_degree <- head(sort(degree_centrality, decreasing = TRUE), 5)
@@ -501,28 +645,35 @@ kable(top_eigenvector_df, format = "latex", booktabs = TRUE, align = "l") %>%
 ```
 
 
+## Cluster-Analyse
+Klassifizierung der Unternehmen:
+Unternehmen werden basierend auf ihrer Netzwerkposition in zentrale (innerhalb von Netzwerken) und periphere (am Rand der Netzwerke) Gruppen klassifiziert.
+Gehaltsvergleich:
+Verwende Boxplots oder Histogramme, um die Gehaltsverteilung in beiden Gruppen zu vergleichen.
+Beispiel: „Die Boxplots zeigen, dass die medianen Gehälter in zentralen Positionen signifikant höher sind als in peripheren Positionen.“
 
-
-
-# Gehaltvergleich in Netzwerkzentren und Peripherien: 
-# Überprüfen, ob zentralere Unternehmen tendenziell höhere oder niedrigere Gehälter bieten
-
-
-## Gehaltsverteilung in Netzwerkzentren und Peripherien
+Abschließend soll noch eine Clusteranalyse durchgeführt werden, die die Gehalt in Bezug auf Standort und Wettbewerb kombiniert betrachtet.
 ### Cluster-Analyse
+Clusteranalyse innerhalb des geografischen und Wettbewerbsnetzwerks.
+Cluster von Unternehmen nach Gehalt und Standort innerhalb des Wettbewerbsnetzwerks: Korrelation zwischen Gehältern und der Stärke von Wettbewerb und regionaler Vernetzung.
+Regionale Gehaltsklassen: Visualisierung der regionalen Gehaltsspreizung in Bezug auf Netzwerkcluster, z.B. ob Cluster in wirtschaftsstarken Regionen höhere Durchschnittsgehälter bieten.
 ```{r}
 # Detect communities
-communities <- cluster_louvain(g_competitors)
+communities <- cluster_louvain(g_direct_competitors)
 ```
 
+
+
+
+Vllt: bevor wir mit den Clustern loslegen
 TODO "Arc Diagramm" zu den regionalen Clustern von der geografischen Netzwerkanalyse
 
-## aaa am Ende
 
+## Ergänzung zu den Zentralitätsanalysen
 ```{r}
 # Prepare data for visNetwork
-nodes <- data.frame(id = V(g_competitors)$name,
-                    label = V(g_competitors)$name,
+nodes <- data.frame(id = V(g_direct_competitors)$name,
+                    label = V(g_direct_competitors)$name,
                     group = membership(communities),
                     value = degree_centrality,
                     title = paste("Degree:", degree_centrality, 
@@ -556,67 +707,16 @@ Zugriff auf die interaktive Visualisierung über das Repository (Dateiname: netw
 
 
 
-
-## Erste Copilot iteration
-
-#Netzwerk von Jobtiteln und Unternehmen:
-#Visualisierung des Netzwerks, das zeigt, welche Unternehmen die meisten unterschiedlichen Jobtitel anbieten.
-#Interpretation: Zentralität der Unternehmen und welche Rolle sie im Jobmarkt spielen.
-#Degree distribution
-```{r}
-# Create the network object
-edges <- data %>%
-  select(`Job Title`, `Company Name`) %>%
-  distinct() %>%
-  rename(from = `Job Title`, to = `Company Name`)
-
-network_job_company <- graph_from_data_frame(edges, directed = FALSE)
-
-degree_distribution <- degree(network_job_company)
-hist(degree_distribution, breaks = 30, main = "Degree Distribution",
-     xlab = "Degree", ylab = "Frequency")
-
-# Community detection using the Louvain method
-communities <- cluster_louvain(network_job_company)
-plot(network_job_company, vertex.label = NA, vertex.size = 5,
-     vertex.color = communities$membership)
-
-# Calculate betweenness centrality
-betweenness_centrality <- betweenness(network_job_company)
-V(network_job_company)$size <- betweenness_centrality /
-  max(betweenness_centrality) * 10  # Scale sizes
-plot(network_job_company, vertex.label = NA,
-     vertex.size = V(network_job_company)$size)
-```
-
-## Zweite Copilot iteration 
-```{r}
-# Standort-Cluster für Gehälter und Bewertungen
-edges_location_salary <- data %>%
-  select(Location, `Salary Estimate`) %>%
-  distinct() %>%
-  mutate(`Salary Estimate` = as.numeric(gsub("[^0-9]", "", `Salary Estimate`))) %>%
-  drop_na() %>%
-  rename(from = Location, to = `Salary Estimate`)
-
-# Remove duplicate edges
-edges_location_salary <- edges_location_salary %>%
-  distinct(from, to, .keep_all = TRUE)
-
-# Erstelle den Graphen
-g_location_salary <- graph_from_data_frame(edges_location_salary, directed = FALSE)
-
-# Visualisiere das Netzwerk
-plot(g_location_salary, vertex.label = NA, vertex.size = 5, 
-     edge.arrow.size = 0.5, main = "Standort-Cluster für Gehälter und Bewertungen")
-```
-
-
 \newpage
 # Conclusion
-.....
+Zusammenfassung der zentralen Ergebnisse:
 
+Bedeutung:
+Diskutiere, wie wichtig geografische Nähe und Wettbewerbsumfeld für die Karriereentwicklung von Data Scientists sind.
 
+Praktische Implikationen:
+Gib Empfehlungen für Jobuchende, wie sie Standorte und Unternehmen auswählen sollten, um die besten Gehaltsaussichten zu haben.
+Dies könnte auch für Unternehmen von Interesse sein, um zu verstehen, wie sie ihre Position im Markt verbessern können.
 
 \newpage
 # Literaturverzeichnis
