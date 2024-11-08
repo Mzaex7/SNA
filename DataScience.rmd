@@ -413,8 +413,8 @@ legend("topright",
 Wie zu erwarten war, sind die meisten Unternehmen Ballungszentren wie New York, Chicago und San Francisco angesiedelt.
 
 #### Vergleich der Gehälter zwischen den Hotspot- und den anderen Regionen
-```{r, fig.height=7, fig.width=8}
-# ausgabe der farbigen Standorte
+```{r, fig.height=5, fig.width=6}
+# Ausgabe der farbigen Standorte
 print(large_locations)
 
 # Filterung der Daten für die Hotspot-Regionen
@@ -436,21 +436,21 @@ ggplot(data = data.frame(Region = c("Hotspot", "Other"),
                          Average_Salary = c(avg_salary_hotspots,
                                             avg_salary_other)),
        aes(x = Region, y = Average_Salary, fill = Region)) +
-  geom_bar(stat = "identity", width = 0.6) +
+  geom_bar(stat = "identity", width = 0.4) +
   scale_fill_manual(values = c("Hotspot" = "#FF5733", "Other" = "#33C3FF")) +
   labs(title = "Average Salary in Hotspot vs. Other Regions",
        x = "Region",
        y = "Average Salary") +
   theme_minimal() +
   theme(
-    plot.title = element_text(hjust = 0.5, size = 18, face = "bold"),
-    axis.title.x = element_text(size = 16, face = "bold"),
-    axis.title.y = element_text(size = 16, face = "bold"),
-    axis.text.x = element_text(size = 16),
-    axis.text.y = element_text(size = 16),
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    axis.title.x = element_text(size = 12, face = "bold"),
+    axis.title.y = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 12),
+    axis.text.y = element_text(size = 12),
     legend.position = "none"
   ) +
-  geom_text(aes(label = round(Average_Salary, 2)), vjust = -0.5, size = 6)
+  geom_text(aes(label = round(Average_Salary, 2)), vjust = -0.5, size = 4)
 ```
 ```{r}
 # Berechnung der Gehaltsunterschiede
@@ -532,7 +532,6 @@ legend("topright", legend = c("Direct Competitors", "Same Industry"),
 Es lassen sich einige interessante Beobachtungen aus dem Netzwerk ziehen.
 Einerseits sind ganz eindeutig Branchencluster zu erkennen, die auf die Branchenzugehörigkeit der Unternehmen hinweisen.
 
-### Branchenzugehörigkeit
 ```{r}
 # Ausgeben der 10 häufigsten Branchen im Netzwerk
 top_industries <- data %>%
@@ -556,9 +555,20 @@ Dies könnte auf eine Diversifikation der Geschäftsfelder hindeuten, die eine b
 Da aber wie oberhalb dargestellt, die Branchenzugehörigkeit eindeutig ist, und somit die Branchenzugehörigkeit
 keinen Mehrwert für die Analyse bietet, wird diese nicht weiter verfolgt.
 
+
+
+
+
+
+
+
+
+
+
 ### Bloß direkte Wettbewerber
 Aus diesem Grund wird das Netzwerk auf direkte Wettbewerber beschränkt, um die Analyse zu vereinfachen und die Relevanz der Wettbewerbsbeziehungen zu erhöhen.
-```{r, fig.height=15, fig.width=15}
+
+```{r, fig.width=15, fig.height=15}
 
 # Extrahiere Unternehmen und ihre Wettbewerber
 edges <- data %>%
@@ -622,26 +632,35 @@ salary_data <- data %>%
 print(salary_data, n = Inf)
 ```
 
-Ausgabe der stark vernetzten Unternehmen?...
+Kommentar!!!.....
 
+## Zentralitätsanalyse innerhalb des Netzwerkes
 
-## Zentralitätsanalyse innerhalb der Netzwerke
+Die hier präsentierten Zentralitätsmaße lassen sich unmittelbar auf die Gehaltsstrukturen im Kontext des Wettbewerbsnetzwerks anwenden. 
+Auf diese Weise könnten sie dazu beitragen, die Position eines Unternehmens in Bezug auf seine Wettbewerber hinsichtlich der Gehälter zu bestimmen.
+
+Folgend wird die Berechnung der Zentralitätsmaße für die Unternehmen im Wettbewerbsnetzwerk dargelegt.
 ```{r}
 # Calculate network metrics
 betweenness_centrality <- betweenness(g_direct_competitors)
 degree_centrality <- degree(g_direct_competitors)
 eigenvector_centrality <- eigen_centrality(g_direct_competitors)$vector
 
+# Wird in einem späteren Schritt für eine interaktive Visualisierung benötigt
 closeness_centrality <- closeness(g_direct_competitors)
 clustering_coeff <- transitivity(g_direct_competitors, type = "local")
 ```
 
 ### Betweenness-Zentralität
 Jetzt soll das igraph-Paket in R verwendet werden, um die Betweenness-Zentralität für jeden Knoten zu berechnen.
-Dies zeigt, wie oft ein Unternehmen auf dem kürzesten Weg zwischen anderen Unternehmen liegt.
+Unternehmen mit hoher Betweenness-Centralität könnten strategische Wettbewerbsvorteile aufweisen, 
+da sie als Vermittler zwischen mehreren Konkurrenten fungieren und dadurch den Informationsfluss beeinflussen können.
 
-Unternehmen mit hoher Betweenness-Zentralität könnten als Brücke zwischen verschiedenen Netzwerken fungieren, 
-was einen Wettbewerbsvorteil und möglicherweise höhere Gehälter zur Folge hat.
+Die Unternehmen könnten höhere Gehälter anbieten, um hochqualifizierte Arbeitskräfte zu gewinnen, die dazu beitragen, 
+ihre zentrale Position und die damit verbundenen Wettbewerbsvorteile zu erhalten. 
+Alternativ könnte ein hohes Gehalt auch als Indikator für eine hohe Nachfrage nach qualifizierten Mitarbeitenden 
+in solchen Schlüsselpositionen dienen, da das Unternehmen sich in einem Bereich positioniert, der viele strategische Informationen benötigt.
+
 ```{r}
 # Berechne die Betweenness-Centrality und sortiere sie absteigend
 top_betweenness <- head(sort(betweenness_centrality, decreasing = TRUE), 5)
@@ -656,15 +675,30 @@ top_betweenness_df <- data.frame(
 # Erstelle die Tabelle und zentriere sie links
 kable(top_betweenness_df, format = "latex", booktabs = TRUE, align = "l") %>%
 kable_styling(latex_options = c("striped", "hold_position"), position = "left")
-
-# Create bar plot
-ggplot(top_betweenness_df, aes(x = reorder(Company, -Betweenness), y = Betweenness)) +
-  geom_bar(stat = "identity") +
-  labs(title = "Top 5 Betweenness Centrality",
-       x = "Company",
-       y = "Betweenness Centrality") +
-  theme_minimal()
 ```
+
+```{r}
+# Zusammenhang zwischen durchschnittliches Gehalt und Betweenness-Zentralität
+salary_betweenness <- data.frame(
+  Salary = salary_data$AverageSalary,
+  Betweenness = betweenness_centrality[match(salary_data$`Company Name`, names(betweenness_centrality))]
+)
+
+# Scatterplot
+ggplot(salary_betweenness, aes(x = Salary, y = Betweenness)) +
+  geom_point() +
+  labs(title = "Scatterplot of Salary vs. Betweenness Centrality",
+       x = "Salary", y = "Betweenness Centrality") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    axis.title = element_text(size = 12, face = "bold"),
+    axis.text = element_text(size = 12)
+  )
+
+```
+...
+
 
 ### Degree-Zentralität
 Hier wird die Anzahl der Kanten gezählt, die an jedem Knoten hängen. 

@@ -958,7 +958,7 @@ Regionen}\label{vergleich-der-gehuxe4lter-zwischen-den-hotspot--und-den-anderen-
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\CommentTok{\# ausgabe der farbigen Standorte}
+\CommentTok{\# Ausgabe der farbigen Standorte}
 \FunctionTok{print}\NormalTok{(large\_locations)}
 \end{Highlighting}
 \end{Shaded}
@@ -989,21 +989,21 @@ Regionen}\label{vergleich-der-gehuxe4lter-zwischen-den-hotspot--und-den-anderen-
                          \AttributeTok{Average\_Salary =} \FunctionTok{c}\NormalTok{(avg\_salary\_hotspots,}
 \NormalTok{                                            avg\_salary\_other)),}
        \FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Region, }\AttributeTok{y =}\NormalTok{ Average\_Salary, }\AttributeTok{fill =}\NormalTok{ Region)) }\SpecialCharTok{+}
-  \FunctionTok{geom\_bar}\NormalTok{(}\AttributeTok{stat =} \StringTok{"identity"}\NormalTok{, }\AttributeTok{width =} \FloatTok{0.6}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{geom\_bar}\NormalTok{(}\AttributeTok{stat =} \StringTok{"identity"}\NormalTok{, }\AttributeTok{width =} \FloatTok{0.4}\NormalTok{) }\SpecialCharTok{+}
   \FunctionTok{scale\_fill\_manual}\NormalTok{(}\AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"Hotspot"} \OtherTok{=} \StringTok{"\#FF5733"}\NormalTok{, }\StringTok{"Other"} \OtherTok{=} \StringTok{"\#33C3FF"}\NormalTok{)) }\SpecialCharTok{+}
   \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Average Salary in Hotspot vs. Other Regions"}\NormalTok{,}
        \AttributeTok{x =} \StringTok{"Region"}\NormalTok{,}
        \AttributeTok{y =} \StringTok{"Average Salary"}\NormalTok{) }\SpecialCharTok{+}
   \FunctionTok{theme\_minimal}\NormalTok{() }\SpecialCharTok{+}
   \FunctionTok{theme}\NormalTok{(}
-    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{hjust =} \FloatTok{0.5}\NormalTok{, }\AttributeTok{size =} \DecValTok{18}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
-    \AttributeTok{axis.title.x =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{16}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
-    \AttributeTok{axis.title.y =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{16}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
-    \AttributeTok{axis.text.x =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{16}\NormalTok{),}
-    \AttributeTok{axis.text.y =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{16}\NormalTok{),}
+    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{hjust =} \FloatTok{0.5}\NormalTok{, }\AttributeTok{size =} \DecValTok{14}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
+    \AttributeTok{axis.title.x =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{12}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
+    \AttributeTok{axis.title.y =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{12}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
+    \AttributeTok{axis.text.x =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{12}\NormalTok{),}
+    \AttributeTok{axis.text.y =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{12}\NormalTok{),}
     \AttributeTok{legend.position =} \StringTok{"none"}
 \NormalTok{  ) }\SpecialCharTok{+}
-  \FunctionTok{geom\_text}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{label =} \FunctionTok{round}\NormalTok{(Average\_Salary, }\DecValTok{2}\NormalTok{)), }\AttributeTok{vjust =} \SpecialCharTok{{-}}\FloatTok{0.5}\NormalTok{, }\AttributeTok{size =} \DecValTok{6}\NormalTok{)}
+  \FunctionTok{geom\_text}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{label =} \FunctionTok{round}\NormalTok{(Average\_Salary, }\DecValTok{2}\NormalTok{)), }\AttributeTok{vjust =} \SpecialCharTok{{-}}\FloatTok{0.5}\NormalTok{, }\AttributeTok{size =} \DecValTok{4}\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
 
@@ -1134,8 +1134,6 @@ Es lassen sich einige interessante Beobachtungen aus dem Netzwerk
 ziehen. Einerseits sind ganz eindeutig Branchencluster zu erkennen, die
 auf die Branchenzugehörigkeit der Unternehmen hinweisen.
 
-\subsubsection{Branchenzugehörigkeit}\label{branchenzugehuxf6rigkeit}
-
 \begin{Shaded}
 \begin{Highlighting}[]
 \CommentTok{\# Ausgeben der 10 häufigsten Branchen im Netzwerk}
@@ -1243,28 +1241,148 @@ Wettbewerbsbeziehungen zu erhöhen.
   \FunctionTok{summarise}\NormalTok{(}\AttributeTok{AverageSalary =} \FunctionTok{mean}\NormalTok{(}\StringTok{\textasciigrave{}}\AttributeTok{Salary Estimate}\StringTok{\textasciigrave{}}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%}
   \FunctionTok{arrange}\NormalTok{(}\FunctionTok{desc}\NormalTok{(AverageSalary))}
 
-\CommentTok{\# Ausgabe der Unternehmen mit den höchsten Gehältern}
-\NormalTok{top\_salaries }\OtherTok{\textless{}{-}} \FunctionTok{head}\NormalTok{(salary\_data, }\DecValTok{5}\NormalTok{)}
-
-\FunctionTok{print}\NormalTok{(top\_salaries)}
+\CommentTok{\# Ausgabe aller Unternehmen zusammen mit ihren Gehältern}
+\FunctionTok{print}\NormalTok{(salary\_data, }\AttributeTok{n =} \ConstantTok{Inf}\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
 
 \begin{verbatim}
-## # A tibble: 5 x 2
-##   `Company Name`           AverageSalary
-##   <chr>                            <dbl>
-## 1 Gallup                            238.
-## 2 Credit Sesame                     205 
-## 3 The Climate Corporation           194 
-## 4 Samsung Research America          177 
-## 5 Nektar Therapeutics               174
+## # A tibble: 127 x 2
+##     `Company Name`                                      AverageSalary
+##     <chr>                                                       <dbl>
+##   1 Gallup                                                      238. 
+##   2 Credit Sesame                                               205  
+##   3 The Climate Corporation                                     194  
+##   4 Samsung Research America                                    177  
+##   5 Nektar Therapeutics                                         174  
+##   6 BioMarin Pharmaceutical                                     168  
+##   7 Adobe                                                       162  
+##   8 Glassdoor                                                   162  
+##   9 Netskope                                                    154. 
+##  10 Liberty Mutual Insurance                                    154. 
+##  11 Factual                                                     153  
+##  12 Visa Inc.                                                   153. 
+##  13 Sunovion                                                    151. 
+##  14 Sumo Logic                                                  150. 
+##  15 Western Digital                                             147. 
+##  16 Capgemini                                                   147  
+##  17 Tapjoy                                                      147. 
+##  18 Mitsubishi Electric Research Labs                           144. 
+##  19 1904labs                                                    144. 
+##  20 <intent>                                                    140  
+##  21 Demandbase                                                  139. 
+##  22 Walmart                                                     139  
+##  23 Red Ventures                                                134  
+##  24 Takeda Pharmaceuticals                                      132. 
+##  25 Johns Hopkins University Applied Physics Laboratory         130  
+##  26 CBS Interactive                                             128  
+##  27 Novetta                                                     128. 
+##  28 Information Builders                                        125  
+##  29 AstraZeneca                                                 124. 
+##  30 TriNet                                                      124. 
+##  31 Swiss Re                                                    123  
+##  32 L.A. Care Health Plan                                       120. 
+##  33 Equity Residential                                          118. 
+##  34 PennyMac                                                    117. 
+##  35 Affinity Solutions                                          114. 
+##  36 Pactera                                                     114. 
+##  37 Genesys                                                     112. 
+##  38 New England Biolabs                                         112. 
+##  39 IQVIA                                                       112. 
+##  40 Assurant                                                    110. 
+##  41 GNY Insurance Companies                                     110. 
+##  42 The Integer Group                                           110  
+##  43 The Buffalo Group                                           108. 
+##  44 Echo Global Logistics                                       108. 
+##  45 Johns Hopkins Health Care                                   108. 
+##  46 Mentor Graphics                                             107  
+##  47 NCSOFT                                                      106. 
+##  48 Porch                                                       106. 
+##  49 Medidata Solutions                                          105  
+##  50 PA Consulting                                               104  
+##  51 Maximus Real Estate Partners                                104. 
+##  52 Blueprint Medicines                                         102  
+##  53 Genworth                                                    102  
+##  54 Blue Cross & Blue Shield of Rhode Island                    100  
+##  55 Centro                                                      100  
+##  56 PatientPoint                                                100  
+##  57 Plymouth Rock Assurance                                      98.5
+##  58 Carmeuse                                                     98  
+##  59 Pilot Flying J Travel Centers LLC                            98  
+##  60 Eventbrite                                                   97.7
+##  61 Strategic Financial Solutions                                97.5
+##  62 comScore                                                     96.5
+##  63 CapTech                                                      95.5
+##  64 CyrusOne                                                     95  
+##  65 Object Partners                                              95  
+##  66 Remedy BPCI Partners, LLC.                                   95  
+##  67 Exelixis                                                     93.8
+##  68 23andMe                                                      92  
+##  69 L&T Infotech                                                 90  
+##  70 Lockheed Martin                                              89  
+##  71 Productive Edge                                              88.8
+##  72 Sauce Labs                                                   88  
+##  73 Fivestars                                                    87.5
+##  74 GSK                                                          87.5
+##  75 Moda Operandi                                                87.5
+##  76 Trilogy Ed                                                   87.5
+##  77 PNNL                                                         87.0
+##  78 AVANADE                                                      87  
+##  79 Biz2Credit Inc                                               87  
+##  80 Mteq                                                         87  
+##  81 Centauri                                                     86.5
+##  82 Esri                                                         85.8
+##  83 Rapid Response Monitoring                                    85.5
+##  84 DICK'S Sporting Goods - Corporate                            85  
+##  85 First Command Financial Services, Inc.                       85  
+##  86 ICW Group                                                    83  
+##  87 Edgewell Personal Care                                       82.5
+##  88 MITRE                                                        82.1
+##  89 Pharmavite                                                   81.5
+##  90 General Dynamics Information Technology                      81.2
+##  91 Caterpillar                                                  81  
+##  92 IHS Markit                                                   80.5
+##  93 Trace3                                                       80  
+##  94 Dayton Freight Lines, Inc.                                   79  
+##  95 Sapphire Digital                                             78  
+##  96 Vermeer                                                      77.5
+##  97 SullivanCotter                                               76  
+##  98 ExecOnline                                                   75.5
+##  99 Audentes Therapeutics                                        73  
+## 100 Beckman Coulter Diagnostics                                  73  
+## 101 United BioSource                                             72.5
+## 102 IZEA                                                         71.5
+## 103 CALIBRE Systems                                              71  
+## 104 Saama Technologies Inc                                       68.5
+## 105 Southwest Research Institute                                 67.7
+## 106 Pacific Northwest National Laboratory                        67  
+## 107 AmeriHealth Caritas                                          66.5
+## 108 AXION Healthcare Solutions                                   66  
+## 109 RTI International                                            65.5
+## 110 Guidepoint                                                   64.5
+## 111 Fareportal                                                   64.4
+## 112 Infosys                                                      62.5
+## 113 Boys Town Hospital                                           61.5
+## 114 National Student Clearinghouse                               61.5
+## 115 Motorola Solutions                                           61  
+## 116 WK Dickson                                                   60.5
+## 117 Associated Banc-Corp                                         60  
+## 118 DECISIVE ANALYTICS Corporation                               59  
+## 119 COUNTRY Financial                                            58.5
+## 120 C Space                                                      56.5
+## 121 CentralReach                                                 56.5
+## 122 DentaQuest                                                   56.5
+## 123 Boys Town                                                    52.5
+## 124 Citadel Federal Credit Union                                 49  
+## 125 Icon Health and Fitness                                      47  
+## 126 Greenway Health                                              37.5
+## 127 Catholic Health Initiatives                                  25
 \end{verbatim}
 
-Ausgabe der stark vernetzten Unternehmen?\ldots{}
+Kommentar!!!\ldots..
 
-\subsection{Zentralitätsanalyse innerhalb der
-Netzwerke}\label{zentralituxe4tsanalyse-innerhalb-der-netzwerke}
+\subsection{Zentralitätsanalyse innerhalb des
+Netzwerkes}\label{zentralituxe4tsanalyse-innerhalb-des-netzwerkes}
 
 \begin{Shaded}
 \begin{Highlighting}[]
