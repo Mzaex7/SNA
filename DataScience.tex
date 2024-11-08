@@ -1384,6 +1384,14 @@ Kommentar!!!\ldots..
 \subsection{Zentralitätsanalyse innerhalb des
 Netzwerkes}\label{zentralituxe4tsanalyse-innerhalb-des-netzwerkes}
 
+Die hier präsentierten Zentralitätsmaße lassen sich unmittelbar auf die
+Gehaltsstrukturen im Kontext des Wettbewerbsnetzwerks anwenden. Auf
+diese Weise könnten sie dazu beitragen, die Position eines Unternehmens
+in Bezug auf seine Wettbewerber hinsichtlich der Gehälter zu bestimmen.
+
+Folgend wird die Berechnung der Zentralitätsmaße für die Unternehmen im
+Wettbewerbsnetzwerk dargelegt.
+
 \begin{Shaded}
 \begin{Highlighting}[]
 \CommentTok{\# Calculate network metrics}
@@ -1391,6 +1399,7 @@ Netzwerkes}\label{zentralituxe4tsanalyse-innerhalb-des-netzwerkes}
 \NormalTok{degree\_centrality }\OtherTok{\textless{}{-}} \FunctionTok{degree}\NormalTok{(g\_direct\_competitors)}
 \NormalTok{eigenvector\_centrality }\OtherTok{\textless{}{-}} \FunctionTok{eigen\_centrality}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{vector}
 
+\CommentTok{\# Wird in einem späteren Schritt für eine interaktive Visualisierung benötigt}
 \NormalTok{closeness\_centrality }\OtherTok{\textless{}{-}} \FunctionTok{closeness}\NormalTok{(g\_direct\_competitors)}
 \NormalTok{clustering\_coeff }\OtherTok{\textless{}{-}} \FunctionTok{transitivity}\NormalTok{(g\_direct\_competitors, }\AttributeTok{type =} \StringTok{"local"}\NormalTok{)}
 \end{Highlighting}
@@ -1399,13 +1408,18 @@ Netzwerkes}\label{zentralituxe4tsanalyse-innerhalb-des-netzwerkes}
 \subsubsection{Betweenness-Zentralität}\label{betweenness-zentralituxe4t}
 
 Jetzt soll das igraph-Paket in R verwendet werden, um die
-Betweenness-Zentralität für jeden Knoten zu berechnen. Dies zeigt, wie
-oft ein Unternehmen auf dem kürzesten Weg zwischen anderen Unternehmen
-liegt.
+Betweenness-Zentralität für jeden Knoten zu berechnen. Unternehmen mit
+hoher Betweenness-Centralität könnten strategische Wettbewerbsvorteile
+aufweisen, da sie als Vermittler zwischen mehreren Konkurrenten
+fungieren und dadurch den Informationsfluss beeinflussen können.
 
-Unternehmen mit hoher Betweenness-Zentralität könnten als Brücke
-zwischen verschiedenen Netzwerken fungieren, was einen
-Wettbewerbsvorteil und möglicherweise höhere Gehälter zur Folge hat.
+Die Unternehmen könnten höhere Gehälter anbieten, um hochqualifizierte
+Arbeitskräfte zu gewinnen, die dazu beitragen, ihre zentrale Position
+und die damit verbundenen Wettbewerbsvorteile zu erhalten. Alternativ
+könnte ein hohes Gehalt auch als Indikator für eine hohe Nachfrage nach
+qualifizierten Mitarbeitenden in solchen Schlüsselpositionen dienen, da
+das Unternehmen sich in einem Bereich positioniert, der viele
+strategische Informationen benötigt.
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -1439,27 +1453,47 @@ PA Consulting & 704\\
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\CommentTok{\# Create bar plot}
-\FunctionTok{ggplot}\NormalTok{(top\_betweenness\_df, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =} \FunctionTok{reorder}\NormalTok{(Company, }\SpecialCharTok{{-}}\NormalTok{Betweenness), }\AttributeTok{y =}\NormalTok{ Betweenness)) }\SpecialCharTok{+}
-  \FunctionTok{geom\_bar}\NormalTok{(}\AttributeTok{stat =} \StringTok{"identity"}\NormalTok{) }\SpecialCharTok{+}
-  \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Top 5 Betweenness Centrality"}\NormalTok{,}
-       \AttributeTok{x =} \StringTok{"Company"}\NormalTok{,}
-       \AttributeTok{y =} \StringTok{"Betweenness Centrality"}\NormalTok{) }\SpecialCharTok{+}
-  \FunctionTok{theme\_minimal}\NormalTok{()}
+\CommentTok{\# Zusammenhang zwischen durchschnittliches Gehalt und Betweenness{-}Zentralität}
+\NormalTok{salary\_betweenness }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}
+  \AttributeTok{Salary =}\NormalTok{ salary\_data}\SpecialCharTok{$}\NormalTok{AverageSalary,}
+  \AttributeTok{Betweenness =}\NormalTok{ betweenness\_centrality[}\FunctionTok{match}\NormalTok{(salary\_data}\SpecialCharTok{$}\StringTok{\textasciigrave{}}\AttributeTok{Company Name}\StringTok{\textasciigrave{}}\NormalTok{, }\FunctionTok{names}\NormalTok{(betweenness\_centrality))]}
+\NormalTok{)}
+
+\CommentTok{\# Scatterplot}
+\FunctionTok{ggplot}\NormalTok{(salary\_betweenness, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Salary, }\AttributeTok{y =}\NormalTok{ Betweenness)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_point}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Scatterplot of Salary vs. Betweenness Centrality"}\NormalTok{,}
+       \AttributeTok{x =} \StringTok{"Salary"}\NormalTok{, }\AttributeTok{y =} \StringTok{"Betweenness Centrality"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{theme\_minimal}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{theme}\NormalTok{(}
+    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{14}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
+    \AttributeTok{axis.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{12}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
+    \AttributeTok{axis.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{12}\NormalTok{)}
+\NormalTok{  )}
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-20-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-21-1.pdf}}
+\ldots{} erläutern, bzw. weiterführen
 
 \subsubsection{Degree-Zentralität}\label{degree-zentralituxe4t}
 
 Hier wird die Anzahl der Kanten gezählt, die an jedem Knoten hängen.
 Hohe Werte können auf starke Verbindungen zu anderen Unternehmen
-hinweisen.
+hinweisen. Unternehmen mit hoher Degree Centrality sind also in einem
+besonderem Maße der Konkurrenz durch eine Vielzahl anderer Firmen
+ausgesetzt, was zu einem hohen Druck innerhalb der Branche führen kann.
 
-Ein Unternehmen mit einer hohen Degree-Zentralität ist in der Regel gut
-vernetzt und könnte in der Lage sein, bessere Gehälter zu zahlen, um
-Talente anzuziehen.
+Ein hoher Degree Centrality-Wert lässt die Vermutung zu, dass es sich um
+ein Unternehmen handelt, welches sich durch höhere Gehälter von der
+Konkurrenz abheben und somit Talente anwerben möchte. Andererseits
+besteht für Unternehmen in stark besetzten Märkten die Möglichkeit,
+durch Maßnahmen wie eine attraktive Arbeitskultur oder
+Weiterbildungsmöglichkeiten für Mitarbeiter, trotz eines geringeren
+Gehalts, für Bewerber attraktiver zu sein. In diesem Fall können
+Unternehmen mit mittleren oder niedrigeren Degree-Centrality-Werten im
+Vergleich attraktivere Gehälter bieten, da sie weniger Wettbewerbsdruck
+haben und gezielt in Gehälter investieren können.
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -1492,6 +1526,19 @@ Booz Allen Hamilton & 5\\
 \end{tabular}
 
 \subsubsection{Eigenvector-Zentralität}\label{eigenvector-zentralituxe4t}
+
+Unternehmen mit hoher Eigenvector Centrality stehen nicht nur in
+Konkurrenz zu einer Vielzahl von Unternehmen, sondern insbesondere zu
+besonders einflussreichen Wettbewerbern im Netzwerk.
+
+Unternehmen mit hoher Eigenvector Centrality könnten in der Konsequenz
+wettbewerbsfähige Gehälter anbieten müssen, um sich im Wettbewerb mit
+zentralen und attraktiven Arbeitgebern zu behaupten. Folglich sind auch
+die umliegenden Firmen gezwungen, ihre Angebote anzupassen, um für die
+Talente am Arbeitsmarkt attraktiv zu bleiben. Es besteht die
+Möglichkeit, dass diese Unternehmen die Gehälter für spezifische,
+wettbewerbsrelevante Rollen erhöhen, um den Marktstandards und den
+Anforderungen eines zentralen Wettbewerbsnetzwerks gerecht zu werden.
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -1585,7 +1632,7 @@ Zentralitätsanalysen}\label{erguxe4nzung-zu-den-zentralituxe4tsanalysen}
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-24-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-25-1.pdf}}
 
 \begin{Shaded}
 \begin{Highlighting}[]

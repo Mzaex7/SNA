@@ -697,15 +697,22 @@ ggplot(salary_betweenness, aes(x = Salary, y = Betweenness)) +
   )
 
 ```
-...
+... erläutern, bzw. weiterführen
 
 
 ### Degree-Zentralität
 Hier wird die Anzahl der Kanten gezählt, die an jedem Knoten hängen. 
 Hohe Werte können auf starke Verbindungen zu anderen Unternehmen hinweisen.
+Unternehmen mit hoher Degree Centrality sind also in einem besonderem Maße der Konkurrenz 
+durch eine Vielzahl anderer Firmen ausgesetzt, was zu einem hohen Druck innerhalb der Branche führen kann.
 
-Ein Unternehmen mit einer hohen Degree-Zentralität ist in der Regel gut vernetzt und könnte in der Lage sein, 
-bessere Gehälter zu zahlen, um Talente anzuziehen.
+Ein hoher Degree Centrality-Wert lässt die Vermutung zu, dass es sich um ein Unternehmen handelt, 
+welches sich durch höhere Gehälter von der Konkurrenz abheben und somit Talente anwerben möchte. 
+Andererseits besteht für Unternehmen in stark besetzten Märkten die Möglichkeit, durch Maßnahmen 
+wie eine attraktive Arbeitskultur oder Weiterbildungsmöglichkeiten für Mitarbeiter, trotz eines 
+geringeren Gehalts, für Bewerber attraktiver zu sein. In diesem Fall können Unternehmen mit mittleren 
+oder niedrigeren Degree-Centrality-Werten im Vergleich attraktivere Gehälter bieten, da sie weniger 
+Wettbewerbsdruck haben und gezielt in Gehälter investieren können.
 ```{r}
 # Berechne die Degree-Centrality und sortiere sie absteigend
 top_degree <- head(sort(degree_centrality, decreasing = TRUE), 5)
@@ -722,7 +729,19 @@ kable(top_degree_df, format = "latex", booktabs = TRUE, align = "l") %>%
   kable_styling(latex_options = c("striped", "hold_position"), position = "left")
 ```
 
+
+
+
 ### Eigenvector-Zentralität
+Unternehmen mit hoher Eigenvector Centrality stehen nicht nur in Konkurrenz zu einer Vielzahl von Unternehmen, 
+sondern insbesondere zu besonders einflussreichen Wettbewerbern im Netzwerk.
+
+Unternehmen mit hoher Eigenvector Centrality könnten in der Konsequenz wettbewerbsfähige Gehälter anbieten müssen, 
+um sich im Wettbewerb mit zentralen und attraktiven Arbeitgebern zu behaupten. 
+Folglich sind auch die umliegenden Firmen gezwungen, ihre Angebote anzupassen, um für die Talente am Arbeitsmarkt attraktiv zu bleiben. 
+Es besteht die Möglichkeit, dass diese Unternehmen die Gehälter für spezifische, wettbewerbsrelevante Rollen erhöhen, 
+um den Marktstandards und den Anforderungen eines zentralen Wettbewerbsnetzwerks gerecht zu werden.
+
 ```{r}
 # Berechne die Eigenvector-Centrality und sortiere sie absteigend
 top_eigenvector <- head(sort(eigenvector_centrality, decreasing = TRUE), 5)
@@ -738,6 +757,10 @@ top_eigenvector_df <- data.frame(
 kable(top_eigenvector_df, format = "latex", booktabs = TRUE, align = "l") %>%
   kable_styling(latex_options = c("striped", "hold_position"), position = "left")
 ```
+
+
+
+
 
 
 ## Cluster-Analyse
