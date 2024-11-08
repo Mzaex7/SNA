@@ -29,6 +29,7 @@ Zunächst müssen die benötigten Bibliotheken installiert werden:
 - $ install.packages("webshot")
 - $ install.packages("knitr")
 - $ install.packages("ggplot2")
+- $ install.packages("RColorBrewer")
 
 Und anschließend geladen werden:
 ```{r setup, message=FALSE, warning=FALSE}
@@ -41,6 +42,7 @@ library(knitr)
 library(kableExtra)
 library(webshot)
 library(ggplot2)
+library(RColorBrewer)
 ```
 
 
@@ -319,7 +321,8 @@ benötigt werden, entfernt.
 # Entfernen irrelevanter Spalten
 # Job Description, Rating, Headquarters, Size, Founded, Type of ownership, Sector, Revenue und Skills
 data <- data %>%
-  select(-c(`Job Description`, Rating, Headquarters, Size, Founded, `Type of ownership`, Sector, Revenue,
+  select(-c(`Job Description`, Rating, Headquarters, Size, Founded,
+            `Type of ownership`, Sector, Revenue,
             Python_yn, `R Studio`, Spark, AWS_yn, Excel_yn))
 
 # Ausgeben der noch enthaltenen Spalten
@@ -404,7 +407,7 @@ legend("topright",
        legend = large_locations,
        col = large_location_colors,
        pch = 19,
-       title = "Locations")       
+       title = "Locations")
 ```
 
 Wie zu erwarten war, sind die meisten Unternehmen Ballungszentren wie New York, Chicago und San Francisco angesiedelt.
@@ -420,7 +423,7 @@ data_hotspots <- data %>%
 
 # Filterung der Daten für die anderen Regionen
 data_other <- data %>%
-  filter(!`Location` %in% large_locations)  
+  filter(!`Location` %in% large_locations)
 
 # Durchschnittsgehalt in den Hotspot-Regionen
 avg_salary_hotspots <- mean(data_hotspots$`Salary Estimate`, na.rm = TRUE)
@@ -473,6 +476,7 @@ Die Wettbewerbsbeziehungen werden anhand der in der Spalte "Competitors" aufgef�
 Die Punkte im Netzwerk repräsentieren die Unternehmen, während die Kanten die Wettbewerbsbeziehungen zwischen ihnen darstellen.
 
 Die Gewichtung der Kanten erfolgt wie folgt:
+
 - Direkte Wettbewerber erhalten eine Gewichtung von 1.
 - Unternehmen in derselben Branche, jedoch nicht als direkte Wettbewerber aufgeführt, erhalten eine Gewichtung von 0.5.
 
@@ -491,7 +495,11 @@ edges <- data %>%
 industry_edges <- data %>%
   filter(!is.na(Industry)) %>%
   select(`Company Name`, Industry) %>%
-  inner_join(data %>% select(`Company Name`, Industry), by = "Industry") %>%
+  inner_join(
+    data %>% select(`Company Name`, Industry),
+    by = "Industry",
+    relationship = "many-to-many"
+  ) %>%
   filter(`Company Name.x` != `Company Name.y`) %>%
   select(from = `Company Name.x`, to = `Company Name.y`) %>%
   mutate(weight = 0.5)  # Gewichtung für gleiche Branche
@@ -519,16 +527,39 @@ plot(g_competitors, vertex.label = NA,
 
 # Legende für Kantenfarben
 legend("topright", legend = c("Direct Competitors", "Same Industry"),
-       fill = c("red", "blue")
-       )
+       fill = c("red", "blue"))
 ```
+Es lassen sich einige interessante Beobachtungen aus dem Netzwerk ziehen.
+Einerseits sind ganz eindeutig Branchencluster zu erkennen, die auf die Branchenzugehörigkeit der Unternehmen hinweisen.
 
+### Branchenzugehörigkeit
+```{r}
+# Ausgeben der 10 häufigsten Branchen im Netzwerk
+top_industries <- data %>%
+  count(Industry, sort = TRUE) %>%
+  head(10)
 
+# Welche Unternehmen sind in mehreren Branchen vertreten?
+multi_industry_companies <- data %>%
+  group_by(`Company Name`) %>%
+  summarise(Num_Industries = n_distinct(Industry)) %>%
+  filter(Num_Industries > 1) %>%
+  arrange(desc(Num_Industries))
 
-Da für den Zweck dieser Arbeit eine gemeinsamer Industriezweig, wie im Datensatz gegeben, keinen besseren Indikator für Wettbewerb darstellt, als 
-die Competitors-Spalte direkt, wird dieser Ansatz nicht weiter verfolgt. Ein Beispiel für so eine Situation wären zwei Unternehmen, die in der Medizinbranche tätig sind, jedoch in unterschiedlichen Bereichen, wie z.B. der Datenanalyse und der Medikamentenentwicklung.
-# Bloß direkte Wettbewerber
+# Ausgabe der Unternehmen, die in mehreren Branchen vertreten sind
+print(multi_industry_companies)
+```
+Jedoch sind keine Unternehmen in mehreren Branchen vertreten, was darauf hindeutet, dass die Branchenzugehörigkeit eindeutig ist.
+Aber es gibt einige Unternehmen, die mit direkter Konkurrenz die verschiedenen Branchen verbinden. 
+Dies könnte auf eine Diversifikation der Geschäftsfelder hindeuten, die eine breitere Wettbewerbsbasis schafft.
+
+Da aber wie oberhalb dargestellt, die Branchenzugehörigkeit eindeutig ist, und somit die Branchenzugehörigkeit
+keinen Mehrwert für die Analyse bietet, wird diese nicht weiter verfolgt.
+
+### Bloß direkte Wettbewerber
+Aus diesem Grund wird das Netzwerk auf direkte Wettbewerber beschränkt, um die Analyse zu vereinfachen und die Relevanz der Wettbewerbsbeziehungen zu erhöhen.
 ```{r, fig.height=15, fig.width=15}
+
 # Extrahiere Unternehmen und ihre Wettbewerber
 edges <- data %>%
   filter(!is.na(Competitors) & Competitors != "-1") %>%
@@ -548,17 +579,47 @@ g_direct_competitors <- graph_from_data_frame(edge_weights, directed = FALSE)
 # Setze die Gewichtungen der Kanten im Graphen
 E(g_direct_competitors)$weight <- edge_weights$weight
 
+# Füge die Gehaltsdaten hinzu und berechne das durchschnittliche Gehalt pro Unternehmen
+salary_data <- data %>%
+  group_by(`Company Name`) %>%
+  summarise(AverageSalary = mean(`Salary Estimate`, na.rm = TRUE))
+
+# Füge die Gehaltsdaten zu den Knoten des Graphen hinzu
+V(g_direct_competitors)$salary <- salary_data$AverageSalary[match(V(g_direct_competitors)$name, salary_data$`Company Name`)]
+
+# Setze die Farben der Knoten basierend auf den Gehältern
+salary_quantiles <- quantile(V(g_direct_competitors)$salary, probs = seq(0, 1, length.out = 6), na.rm = TRUE)
+color_palette <- brewer.pal(5, "YlOrRd")
+V(g_direct_competitors)$color <- cut(V(g_direct_competitors)$salary, 
+                                     breaks = salary_quantiles, 
+                                     labels = FALSE, 
+                                     include.lowest = TRUE)
+V(g_direct_competitors)$color <- color_palette[V(g_direct_competitors)$color]
+
 # Setze die Farben der Kanten basierend auf der Gewichtung
 E(g_direct_competitors)$color <- "red"
 
 # Visualisiere das Netzwerk mit kleineren Knoten
 plot(g_direct_competitors, vertex.label = NA,
      vertex.size = 3,  # Kleinere Knoten
-     edge.width = 2 * E(g_direct_competitors)$weight,  # Gewichtung der Kanten
+     edge.width = 1 * E(g_direct_competitors)$weight,  # Reduzierte Gewichtung der Kanten
      edge.arrow.size = 1,
      main = "Unternehmensnetzwerk basierend auf direkten Wettbewerbern",
      layout = layout_with_fr
 )
+
+# Legende für Knotenfarben
+legend("topright", legend = c("Lowest Salary", "Low Salary", "Medium Salary", "High Salary", "Highest Salary"),
+       fill = color_palette)
+
+# Ausgabe der Gehälter der Unternehmen
+salary_data <- data %>%
+  group_by(`Company Name`) %>%
+  summarise(AverageSalary = mean(`Salary Estimate`, na.rm = TRUE)) %>%
+  arrange(desc(AverageSalary))
+
+# Ausgabe aller Unternehmen zusammen mit ihren Gehältern
+print(salary_data, n = Inf)
 ```
 
 Ausgabe der stark vernetzten Unternehmen?...

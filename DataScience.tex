@@ -165,6 +165,8 @@ Zunächst müssen die benötigten Bibliotheken installiert werden:
   \$ install.packages(``knitr'')
 \item
   \$ install.packages(``ggplot2'')
+\item
+  \$ install.packages(``RColorBrewer'')
 \end{itemize}
 
 Und anschließend geladen werden:
@@ -180,6 +182,7 @@ Und anschließend geladen werden:
 \FunctionTok{library}\NormalTok{(kableExtra)}
 \FunctionTok{library}\NormalTok{(webshot)}
 \FunctionTok{library}\NormalTok{(ggplot2)}
+\FunctionTok{library}\NormalTok{(RColorBrewer)}
 \end{Highlighting}
 \end{Shaded}
 
@@ -838,7 +841,8 @@ entfernt.
 \CommentTok{\# Entfernen irrelevanter Spalten}
 \CommentTok{\# Job Description, Rating, Headquarters, Size, Founded, Type of ownership, Sector, Revenue und Skills}
 \NormalTok{data }\OtherTok{\textless{}{-}}\NormalTok{ data }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{select}\NormalTok{(}\SpecialCharTok{{-}}\FunctionTok{c}\NormalTok{(}\StringTok{\textasciigrave{}}\AttributeTok{Job Description}\StringTok{\textasciigrave{}}\NormalTok{, Rating, Headquarters, Size, Founded, }\StringTok{\textasciigrave{}}\AttributeTok{Type of ownership}\StringTok{\textasciigrave{}}\NormalTok{, Sector, Revenue,}
+  \FunctionTok{select}\NormalTok{(}\SpecialCharTok{{-}}\FunctionTok{c}\NormalTok{(}\StringTok{\textasciigrave{}}\AttributeTok{Job Description}\StringTok{\textasciigrave{}}\NormalTok{, Rating, Headquarters, Size, Founded,}
+            \StringTok{\textasciigrave{}}\AttributeTok{Type of ownership}\StringTok{\textasciigrave{}}\NormalTok{, Sector, Revenue,}
 \NormalTok{            Python\_yn, }\StringTok{\textasciigrave{}}\AttributeTok{R Studio}\StringTok{\textasciigrave{}}\NormalTok{, Spark, AWS\_yn, Excel\_yn))}
 
 \CommentTok{\# Ausgeben der noch enthaltenen Spalten}
@@ -940,7 +944,7 @@ geändert, um die Standorte mit mehreren Unternehmen hervorzuheben.
        \AttributeTok{legend =}\NormalTok{ large\_locations,}
        \AttributeTok{col =}\NormalTok{ large\_location\_colors,}
        \AttributeTok{pch =} \DecValTok{19}\NormalTok{,}
-       \AttributeTok{title =} \StringTok{"Locations"}\NormalTok{)       }
+       \AttributeTok{title =} \StringTok{"Locations"}\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
 
@@ -972,7 +976,7 @@ Regionen}\label{vergleich-der-gehuxe4lter-zwischen-den-hotspot--und-den-anderen-
 
 \CommentTok{\# Filterung der Daten für die anderen Regionen}
 \NormalTok{data\_other }\OtherTok{\textless{}{-}}\NormalTok{ data }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{filter}\NormalTok{(}\SpecialCharTok{!}\StringTok{\textasciigrave{}}\AttributeTok{Location}\StringTok{\textasciigrave{}} \SpecialCharTok{\%in\%}\NormalTok{ large\_locations)  }
+  \FunctionTok{filter}\NormalTok{(}\SpecialCharTok{!}\StringTok{\textasciigrave{}}\AttributeTok{Location}\StringTok{\textasciigrave{}} \SpecialCharTok{\%in\%}\NormalTok{ large\_locations)}
 
 \CommentTok{\# Durchschnittsgehalt in den Hotspot{-}Regionen}
 \NormalTok{avg\_salary\_hotspots }\OtherTok{\textless{}{-}} \FunctionTok{mean}\NormalTok{(data\_hotspots}\SpecialCharTok{$}\StringTok{\textasciigrave{}}\AttributeTok{Salary Estimate}\StringTok{\textasciigrave{}}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)}
@@ -1061,10 +1065,19 @@ Die Wettbewerbsbeziehungen werden anhand der in der Spalte
 Netzwerk repräsentieren die Unternehmen, während die Kanten die
 Wettbewerbsbeziehungen zwischen ihnen darstellen.
 
-Die Gewichtung der Kanten erfolgt wie folgt: - Direkte Wettbewerber
-erhalten eine Gewichtung von 1. - Unternehmen in derselben Branche,
-jedoch nicht als direkte Wettbewerber aufgeführt, erhalten eine
-Gewichtung von 0.5.
+Die Gewichtung der Kanten erfolgt wie folgt:
+
+\begin{itemize}
+\tightlist
+\item
+  Direkte Wettbewerber erhalten eine Gewichtung von 1.
+\item
+  Unternehmen in derselben Branche, jedoch nicht als direkte
+  Wettbewerber aufgeführt, erhalten eine Gewichtung von 0.5.
+\end{itemize}
+
+Branchenbezogene Wettbewerbsbeziehungen sind in blau dargestellt,
+während direkte Wettbewerber in rot hervorgehoben sind.
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -1080,23 +1093,15 @@ Gewichtung von 0.5.
 \NormalTok{industry\_edges }\OtherTok{\textless{}{-}}\NormalTok{ data }\SpecialCharTok{\%\textgreater{}\%}
   \FunctionTok{filter}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(Industry)) }\SpecialCharTok{\%\textgreater{}\%}
   \FunctionTok{select}\NormalTok{(}\StringTok{\textasciigrave{}}\AttributeTok{Company Name}\StringTok{\textasciigrave{}}\NormalTok{, Industry) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{inner\_join}\NormalTok{(data }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{select}\NormalTok{(}\StringTok{\textasciigrave{}}\AttributeTok{Company Name}\StringTok{\textasciigrave{}}\NormalTok{, Industry), }\AttributeTok{by =} \StringTok{"Industry"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{inner\_join}\NormalTok{(}
+\NormalTok{    data }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{select}\NormalTok{(}\StringTok{\textasciigrave{}}\AttributeTok{Company Name}\StringTok{\textasciigrave{}}\NormalTok{, Industry),}
+    \AttributeTok{by =} \StringTok{"Industry"}\NormalTok{,}
+    \AttributeTok{relationship =} \StringTok{"many{-}to{-}many"}
+\NormalTok{  ) }\SpecialCharTok{\%\textgreater{}\%}
   \FunctionTok{filter}\NormalTok{(}\StringTok{\textasciigrave{}}\AttributeTok{Company Name.x}\StringTok{\textasciigrave{}} \SpecialCharTok{!=} \StringTok{\textasciigrave{}}\AttributeTok{Company Name.y}\StringTok{\textasciigrave{}}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
   \FunctionTok{select}\NormalTok{(}\AttributeTok{from =} \StringTok{\textasciigrave{}}\AttributeTok{Company Name.x}\StringTok{\textasciigrave{}}\NormalTok{, }\AttributeTok{to =} \StringTok{\textasciigrave{}}\AttributeTok{Company Name.y}\StringTok{\textasciigrave{}}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
   \FunctionTok{mutate}\NormalTok{(}\AttributeTok{weight =} \FloatTok{0.5}\NormalTok{)  }\CommentTok{\# Gewichtung für gleiche Branche}
-\end{Highlighting}
-\end{Shaded}
 
-\begin{verbatim}
-## Warning in inner_join(., data %>% select(`Company Name`, Industry), by = "Industry"): Detected an unexpected many-to-many relationship between `x` and `y`.
-## i Row 1 of `x` matches multiple rows in `y`.
-## i Row 6 of `y` matches multiple rows in `x`.
-## i If a many-to-many relationship is expected, set `relationship =
-##   "many-to-many"` to silence this warning.
-\end{verbatim}
-
-\begin{Shaded}
-\begin{Highlighting}[]
 \CommentTok{\# Kombiniere beide Datensätze}
 \NormalTok{all\_edges }\OtherTok{\textless{}{-}} \FunctionTok{bind\_rows}\NormalTok{(edges, industry\_edges)}
 
@@ -1120,21 +1125,57 @@ Gewichtung von 0.5.
 
 \CommentTok{\# Legende für Kantenfarben}
 \FunctionTok{legend}\NormalTok{(}\StringTok{"topright"}\NormalTok{, }\AttributeTok{legend =} \FunctionTok{c}\NormalTok{(}\StringTok{"Direct Competitors"}\NormalTok{, }\StringTok{"Same Industry"}\NormalTok{),}
-       \AttributeTok{fill =} \FunctionTok{c}\NormalTok{(}\StringTok{"red"}\NormalTok{, }\StringTok{"blue"}\NormalTok{)}
-\NormalTok{       )}
+       \AttributeTok{fill =} \FunctionTok{c}\NormalTok{(}\StringTok{"red"}\NormalTok{, }\StringTok{"blue"}\NormalTok{))}
 \end{Highlighting}
 \end{Shaded}
 
 \pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-16-1.pdf}}
-\ldots{}
+Es lassen sich einige interessante Beobachtungen aus dem Netzwerk
+ziehen. Einerseits sind ganz eindeutig Branchencluster zu erkennen, die
+auf die Branchenzugehörigkeit der Unternehmen hinweisen.
 
-Da für den Zweck dieser Arbeit eine gemeinsamer Industriezweig, wie im
-Datensatz gegeben, keinen besseren Indikator für Wettbewerb darstellt,
-als die Competitors-Spalte direkt, wird dieser Ansatz nicht weiter
-verfolgt. Ein Beispiel für so eine Situation wären zwei Unternehmen, die
-in der Medizinbranche tätig sind, jedoch in unterschiedlichen Bereichen,
-wie z.B. der Datenanalyse und der Medikamentenentwicklung. \# Bloß
-direkte Wettbewerber
+\subsubsection{Branchenzugehörigkeit}\label{branchenzugehuxf6rigkeit}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Ausgeben der 10 häufigsten Branchen im Netzwerk}
+\NormalTok{top\_industries }\OtherTok{\textless{}{-}}\NormalTok{ data }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{count}\NormalTok{(Industry, }\AttributeTok{sort =} \ConstantTok{TRUE}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{head}\NormalTok{(}\DecValTok{10}\NormalTok{)}
+
+\CommentTok{\# Welche Unternehmen sind in mehreren Branchen vertreten?}
+\NormalTok{multi\_industry\_companies }\OtherTok{\textless{}{-}}\NormalTok{ data }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{group\_by}\NormalTok{(}\StringTok{\textasciigrave{}}\AttributeTok{Company Name}\StringTok{\textasciigrave{}}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{summarise}\NormalTok{(}\AttributeTok{Num\_Industries =} \FunctionTok{n\_distinct}\NormalTok{(Industry)) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(Num\_Industries }\SpecialCharTok{\textgreater{}} \DecValTok{1}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{arrange}\NormalTok{(}\FunctionTok{desc}\NormalTok{(Num\_Industries))}
+
+\CommentTok{\# Ausgabe der Unternehmen, die in mehreren Branchen vertreten sind}
+\FunctionTok{print}\NormalTok{(multi\_industry\_companies)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## # A tibble: 0 x 2
+## # i 2 variables: Company Name <chr>, Num_Industries <int>
+\end{verbatim}
+
+Jedoch sind keine Unternehmen in mehreren Branchen vertreten, was darauf
+hindeutet, dass die Branchenzugehörigkeit eindeutig ist. Aber es gibt
+einige Unternehmen, die mit direkter Konkurrenz die verschiedenen
+Branchen verbinden. Dies könnte auf eine Diversifikation der
+Geschäftsfelder hindeuten, die eine breitere Wettbewerbsbasis schafft.
+
+Da aber wie oberhalb dargestellt, die Branchenzugehörigkeit eindeutig
+ist, und somit die Branchenzugehörigkeit keinen Mehrwert für die Analyse
+bietet, wird diese nicht weiter verfolgt.
+
+\subsubsection{Bloß direkte
+Wettbewerber}\label{blouxdf-direkte-wettbewerber}
+
+Aus diesem Grund wird das Netzwerk auf direkte Wettbewerber beschränkt,
+um die Analyse zu vereinfachen und die Relevanz der
+Wettbewerbsbeziehungen zu erhöhen.
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -1157,21 +1198,68 @@ direkte Wettbewerber
 \CommentTok{\# Setze die Gewichtungen der Kanten im Graphen}
 \FunctionTok{E}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{weight }\OtherTok{\textless{}{-}}\NormalTok{ edge\_weights}\SpecialCharTok{$}\NormalTok{weight}
 
+\CommentTok{\# Füge die Gehaltsdaten hinzu und berechne das durchschnittliche Gehalt pro Unternehmen}
+\NormalTok{salary\_data }\OtherTok{\textless{}{-}}\NormalTok{ data }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{group\_by}\NormalTok{(}\StringTok{\textasciigrave{}}\AttributeTok{Company Name}\StringTok{\textasciigrave{}}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{summarise}\NormalTok{(}\AttributeTok{AverageSalary =} \FunctionTok{mean}\NormalTok{(}\StringTok{\textasciigrave{}}\AttributeTok{Salary Estimate}\StringTok{\textasciigrave{}}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{))}
+
+\CommentTok{\# Füge die Gehaltsdaten zu den Knoten des Graphen hinzu}
+\FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{salary }\OtherTok{\textless{}{-}}\NormalTok{ salary\_data}\SpecialCharTok{$}\NormalTok{AverageSalary[}\FunctionTok{match}\NormalTok{(}\FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{name, salary\_data}\SpecialCharTok{$}\StringTok{\textasciigrave{}}\AttributeTok{Company Name}\StringTok{\textasciigrave{}}\NormalTok{)]}
+
+\CommentTok{\# Setze die Farben der Knoten basierend auf den Gehältern}
+\NormalTok{salary\_quantiles }\OtherTok{\textless{}{-}} \FunctionTok{quantile}\NormalTok{(}\FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{salary, }\AttributeTok{probs =} \FunctionTok{seq}\NormalTok{(}\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{, }\AttributeTok{length.out =} \DecValTok{6}\NormalTok{), }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)}
+\NormalTok{color\_palette }\OtherTok{\textless{}{-}} \FunctionTok{brewer.pal}\NormalTok{(}\DecValTok{5}\NormalTok{, }\StringTok{"YlOrRd"}\NormalTok{)}
+\FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{color }\OtherTok{\textless{}{-}} \FunctionTok{cut}\NormalTok{(}\FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{salary, }
+                                     \AttributeTok{breaks =}\NormalTok{ salary\_quantiles, }
+                                     \AttributeTok{labels =} \ConstantTok{FALSE}\NormalTok{, }
+                                     \AttributeTok{include.lowest =} \ConstantTok{TRUE}\NormalTok{)}
+\FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{color }\OtherTok{\textless{}{-}}\NormalTok{ color\_palette[}\FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{color]}
+
 \CommentTok{\# Setze die Farben der Kanten basierend auf der Gewichtung}
 \FunctionTok{E}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{color }\OtherTok{\textless{}{-}} \StringTok{"red"}
 
 \CommentTok{\# Visualisiere das Netzwerk mit kleineren Knoten}
 \FunctionTok{plot}\NormalTok{(g\_direct\_competitors, }\AttributeTok{vertex.label =} \ConstantTok{NA}\NormalTok{,}
      \AttributeTok{vertex.size =} \DecValTok{3}\NormalTok{,  }\CommentTok{\# Kleinere Knoten}
-     \AttributeTok{edge.width =} \DecValTok{2} \SpecialCharTok{*} \FunctionTok{E}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{weight,  }\CommentTok{\# Gewichtung der Kanten}
+     \AttributeTok{edge.width =} \DecValTok{1} \SpecialCharTok{*} \FunctionTok{E}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{weight,  }\CommentTok{\# Reduzierte Gewichtung der Kanten}
      \AttributeTok{edge.arrow.size =} \DecValTok{1}\NormalTok{,}
      \AttributeTok{main =} \StringTok{"Unternehmensnetzwerk basierend auf direkten Wettbewerbern"}\NormalTok{,}
      \AttributeTok{layout =}\NormalTok{ layout\_with\_fr}
 \NormalTok{)}
+
+\CommentTok{\# Legende für Knotenfarben}
+\FunctionTok{legend}\NormalTok{(}\StringTok{"topright"}\NormalTok{, }\AttributeTok{legend =} \FunctionTok{c}\NormalTok{(}\StringTok{"Lowest Salary"}\NormalTok{, }\StringTok{"Low Salary"}\NormalTok{, }\StringTok{"Medium Salary"}\NormalTok{, }\StringTok{"High Salary"}\NormalTok{, }\StringTok{"Highest Salary"}\NormalTok{),}
+       \AttributeTok{fill =}\NormalTok{ color\_palette)}
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-17-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-18-1.pdf}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Ausgabe der Gehälter der Unternehmen}
+\NormalTok{salary\_data }\OtherTok{\textless{}{-}}\NormalTok{ data }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{group\_by}\NormalTok{(}\StringTok{\textasciigrave{}}\AttributeTok{Company Name}\StringTok{\textasciigrave{}}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{summarise}\NormalTok{(}\AttributeTok{AverageSalary =} \FunctionTok{mean}\NormalTok{(}\StringTok{\textasciigrave{}}\AttributeTok{Salary Estimate}\StringTok{\textasciigrave{}}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{arrange}\NormalTok{(}\FunctionTok{desc}\NormalTok{(AverageSalary))}
+
+\CommentTok{\# Ausgabe der Unternehmen mit den höchsten Gehältern}
+\NormalTok{top\_salaries }\OtherTok{\textless{}{-}} \FunctionTok{head}\NormalTok{(salary\_data, }\DecValTok{5}\NormalTok{)}
+
+\FunctionTok{print}\NormalTok{(top\_salaries)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## # A tibble: 5 x 2
+##   `Company Name`           AverageSalary
+##   <chr>                            <dbl>
+## 1 Gallup                            238.
+## 2 Credit Sesame                     205 
+## 3 The Climate Corporation           194 
+## 4 Samsung Research America          177 
+## 5 Nektar Therapeutics               174
+\end{verbatim}
 
 Ausgabe der stark vernetzten Unternehmen?\ldots{}
 
@@ -1243,7 +1331,7 @@ PA Consulting & 704\\
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-19-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-20-1.pdf}}
 
 \subsubsection{Degree-Zentralität}\label{degree-zentralituxe4t}
 
@@ -1379,7 +1467,7 @@ Zentralitätsanalysen}\label{erguxe4nzung-zu-den-zentralituxe4tsanalysen}
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-23-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-24-1.pdf}}
 
 \begin{Shaded}
 \begin{Highlighting}[]
