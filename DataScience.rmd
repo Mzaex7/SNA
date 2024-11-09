@@ -459,6 +459,9 @@ legend("topright",
        col = large_location_colors,
        pch = 19,
        title = "Locations")
+
+title(main = "Geografisches Netzwerk basierend auf Unternehmensstandorten", cex.main = 2)
+
 ```
 
 Wie zu erwarten war, sind die meisten Unternehmen Ballungszentren wie New York, Chicago und San Francisco angesiedelt.
@@ -514,6 +517,7 @@ print(paste("Durchschnittlicher Gehaltsunterschied:", salary_diff))
 ```
 Das Ergebniss zeigt, dass entsprechend der vorher getroffenen Annahme, die Gehälter in den Hotspot-Regionen im Durchschnitt höher sind als in anderen Regionen.
 Dies impliziert eine Korrelation zwischen geografischer Nähe und Gehaltsniveau.
+Eine mögliche Erlärung hierfür könnte die höhere Lebenshaltungskosten in Ballungszentren sein, die höhere Gehälter erforderlich machen.
 
 Deswegen sollen am Ende dieser Arbeit die Ergebnisse der Wettbewerbsanalyse mit den Ergebnissen der geografischen Analyse verglichen und in Bezug gesetz werden.
 
@@ -572,8 +576,10 @@ plot(g_competitors, vertex.label = NA,
      vertex.size = 2,  # Kleinere Knoten
      edge.width = E(g_competitors)$weight,  # Gewichtung der Kanten
      edge.arrow.size = 0.5,  # Kleinere Pfeile
-     main = "Unternehmensnetzwerk basierend auf Wettbewerbern und Branchen",
      layout = layout_with_fr)
+
+title(main = "Unternehmensnetzwerk basierend auf Wettbewerbern und Branchen", cex.main = 2)
+
 
 # Legende für Kantenfarben
 legend("topright", legend = c("Direct Competitors", "Same Industry"),
@@ -608,14 +614,6 @@ Dies könnte auf eine Diversifikation der Geschäftsfelder hindeuten, die eine b
 
 Da aber wie oberhalb dargestellt, die Branchenzugehörigkeit eindeutig ist, und somit die Branchenzugehörigkeit
 keinen Mehrwert für die Analyse bietet, wird diese nicht weiter verfolgt.
-
-
-
-
-
-
-
-
 
 
 
@@ -667,9 +665,10 @@ plot(g_direct_competitors, vertex.label = NA,
      vertex.size = 3,  # Kleinere Knoten
      edge.width = 1 * E(g_direct_competitors)$weight,  # Reduzierte Gewichtung der Kanten
      edge.arrow.size = 1,
-     main = "Unternehmensnetzwerk basierend auf direkten Wettbewerbern",
      layout = layout_with_fr
 )
+title(main = "Unternehmensnetzwerk basierend auf direkten Wettbewerbern", cex.main = 2)
+
 
 # Legende für Knotenfarben
 legend("topright", legend = c("Lowest Salary", "Low Salary", "Medium Salary", "High Salary", "Highest Salary"),
@@ -687,17 +686,33 @@ print(salary_data, n = 10)
 
 Kommentar!!!.....
 
+TODO 
+
 ## Zentralitätsanalyse innerhalb des Netzwerkes
 
-Die hier präsentierten Zentralitätsmaße lassen sich unmittelbar auf die Gehaltsstrukturen im Kontext des Wettbewerbsnetzwerks anwenden. 
+Die hier präsentierten Zentralitätsmaße lassen sich unmittelbar auf die Gehaltsstrukturen im Kontext des Wettbewerbsnetzwerks anwenden.
 Auf diese Weise könnten sie dazu beitragen, die Position eines Unternehmens in Bezug auf seine Wettbewerber hinsichtlich der Gehälter zu bestimmen.
 
 Folgend wird die Berechnung der Zentralitätsmaße für die Unternehmen im Wettbewerbsnetzwerk dargelegt.
 ```{r}
-# Calculate network metrics
-betweenness_centrality <- betweenness(g_direct_competitors)
-degree_centrality <- degree(g_direct_competitors)
-eigenvector_centrality <- eigen_centrality(g_direct_competitors)$vector
+# Datenauswahl für die Zentralitätsanalyse
+selected_data <- data %>%
+  select(`Company Name`, Competitors, `Salary Estimate`)
+
+# Extrahiere Unternehmen und ihre Wettbewerber
+edges <- selected_data %>%
+  separate_rows(Competitors, sep = ", ") %>%
+  select(`Company Name`, Competitors) %>%
+  rename(from = `Company Name`, to = Competitors)
+
+# Erstelle den Graphen
+g_competitors_zentralität <- graph_from_data_frame(edges, directed = FALSE)
+
+
+# Berechne die Zentralitätsmaße für die Knoten
+degree_centrality <- degree(g_competitors_zentralität, mode = "all")
+betweenness_centrality <- betweenness(g_competitors_zentralität, directed = FALSE)
+eigenvector_centrality <- evcent(g_competitors_zentralität, directed = FALSE)
 ```
 
 ### Betweenness-Zentralität
@@ -705,8 +720,8 @@ Jetzt soll das igraph-Paket in R verwendet werden, um die Betweenness-Zentralit�
 Unternehmen mit hoher Betweenness-Centralität könnten strategische Wettbewerbsvorteile aufweisen, 
 da sie als Vermittler zwischen mehreren Konkurrenten fungieren und dadurch den Informationsfluss beeinflussen können.
 
-Die Unternehmen könnten höhere Gehälter anbieten, um hochqualifizierte Arbeitskräfte zu gewinnen, die dazu beitragen, 
-ihre zentrale Position und die damit verbundenen Wettbewerbsvorteile zu erhalten. 
+Die Unternehmen könnten höhere Gehälter anbieten, um hochqualifizierte Arbeitskräfte zu gewinnen, die dazu beitragen,
+ihre zentrale Position und die damit verbundenen Wettbewerbsvorteile zu erhalten.
 Alternativ könnte ein hohes Gehalt auch als Indikator für eine hohe Nachfrage nach qualifizierten Mitarbeitenden 
 in solchen Schlüsselpositionen dienen, da das Unternehmen sich in einem Bereich positioniert, der viele strategische Informationen benötigt.
 
@@ -734,9 +749,10 @@ salary_betweenness <- data.frame(
   Betweenness = betweenness_centrality[match(salary_data$`Company Name`, names(betweenness_centrality))]
 )
 
-# Scatterplot
+# Scatterplot mit roter, gestrichelter Trendlinie
 ggplot(salary_betweenness, aes(x = Salary, y = Betweenness)) +
   geom_point() +
+  geom_smooth(method = "loess", se = FALSE, color = "red", linetype = "dashed") +
   labs(title = "Scatterplot of Salary vs. Betweenness Centrality",
        x = "Salary", y = "Betweenness Centrality") +
   theme_minimal() +
@@ -745,27 +761,51 @@ ggplot(salary_betweenness, aes(x = Salary, y = Betweenness)) +
     axis.title = element_text(size = 12, face = "bold"),
     axis.text = element_text(size = 12)
   )
-
 ```
 Der Scatterplot veranschaulicht die Korrelation zwischen dem Gehalt auf der x-Achse und der Betweenness Centrality auf der y-Achse.
+Die rote Linie zeigt einen nichtlinearen Trend zwischen Gehalt und Betweenness Centrality, was auf eine mögliche Korrelation hinweisen könnte, insbesondere bei höheren Gehältern.
 
-Die Mehrzahl der Unternehmen weist eine geringe Betweenness Centrality auf, wobei die Höhe der Vergütung eine untergeordnete Rolle spielt. 
-Allerdings lassen sich auch Ausnahmen mit einer hohen Betweenness Centrality (über 200) bei moderaten Gehältern (ca. 75) beobachten. 
-Dies lässt den Schluss zu, dass bestimmte Unternehmen eine zentrale Vermittlerrolle im Netzwerk einnehmen, 
+Die Mehrzahl der Unternehmen weist eine geringe Betweenness Centrality auf, wobei die Höhe der Vergütung eine eher untergeordnete Rolle spielt. 
+Allerdings lässt sich eine Ausnahmen beobachten. 
+Ab ca. 150k Dollar auf der Gehaltsachse zeigt der Trend einen deutlichen Anstieg der Betweenness Centrality.
+Dies könnte bedeuten, dass Unternehmen mit sehr hohen Gehältern tendenziell auch höhere Betweenness Centrality Werte aufweisen und somit eine wichtige Vermittlerrolle im Netzwerk einnehmen. 
+Jedoch wird dieser Antieg bloß von einem Unternehmen repräsentiert, was auf eine Ausnahme hinweisen könnte.
+Dieses Unternehmen könnten jedoch ein besonders attraktiver Arbeitgeber für strategische Schlüsselpositionen sein und durch hohe Gehälter zusätzlich Talente anziehen.
+
+Allgemiens lässt dies den Schluss zu, dass bestimmte Unternehmen eine zentrale Vermittlerrolle im Netzwerk einnehmen, 
 ohne zwangsläufig die höchsten Gehälter zu offerieren.
 
-Es lässt sich keine eindeutige positive Korrelation zwischen Gehalt und Betweenness-Centrality feststellen. 
-Dies impliziert, dass Unternehmen mit hoher Betweenness Centrality nicht zwangsläufig höhere Gehälter zahlen. 
-Es ist denkbar, dass andere Faktoren wie beispielsweise die Größe des Unternehmens die Höhe der Gehälter 
-stärker beeinflussen als die zentrale Position im Wettbewerbsnetzwerk.
-
 Die wenigen Unternehmen mit einer sehr hohen Betweenness Centrality könnten als strategische Vermittler im Markt auftreten und 
-dabei möglicherweise andere Vorteile nutzen, anstatt ihre Gehälter zu erhöhen. Diese Erkenntnis lässt die Hypothese zu, dass Unternehmen, 
-die über zahlreiche Verbindungen im Wettbewerbsnetzwerk verfügen, ihre Attraktivität nicht allein durch monetäre Zuwendungen, 
-sondern auch durch andere Vorteile oder Reputation aufrechterhalten könnten.
+dabei möglicherweise andere Vorteile nutzen, anstatt ihre Gehälter zu erhöhen.
+Die dargelegte Erkenntnis lässt die Hypothese zu, dass Unternehmen, 
+die über zahlreiche Verbindungen im Wettbewerbsnetzwerk verfügen, 
+ihre Attraktivität nicht allein durch monetäre Zuwendungen, sondern auch durch andere Vorteile oder Reputation aufrechterhalten könnten. 
+Für hochspezialisierte Unternehmen, die in einer Nische tätig sind und weniger Konkurrenz haben, 
+könnte es sich lohnen, gezielt in Gehälter zu investieren, um Talente anzuziehen.
 
 
-höheres Gehalt durch spezialisierung?
+Im folgenden Schritt soll sich der Außreißer mit dem höchsten Gehalt und der zweithöchsten Betweenness Centrality genauer betrachtet werden.
+```{r}
+# Unternehmen mit dem höchsten Gehalt und der zweithöchsten Betweenness Centrality
+outlier <- salary_betweenness %>%
+  filter(Salary > 210 & Betweenness > 0.0001)
+
+# Ausgabe des Unternehmens
+print(outlier)
+```
+
+Das Unternehmen mit dem höchsten Gehalt und der zweithöchsten Betweenness Centrality ist "Gallup".
+
+```{r}
+# Wo befindet sich das Unternehmen "Gallup" im Wettbewerbsnetzwerk?
+gallup_neighbors <- neighbors(g_direct_competitors, "Gallup", mode = "all")
+
+# Ausgabe der direkten Wettbewerber von "Gallup"
+print(gallup_neighbors)
+```
+"Gallup" hat 2 direkte Wettbewerber, das "Booz Allen Hamilton Advisory Board" und "McKinsey & Company".
+Daraus lässt sich schließen, dass "Gallup" eine zentrale Vermittlerrolle zwischen diesen beiden Unternehmen einnimmt,
+was durch die hohe Betweenness Centrality und das hohe Gehalt reflektiert wird.
 
 ### Degree-Zentralität
 Hier wird die Anzahl der Kanten gezählt, die an jedem Knoten hängen. 
@@ -805,6 +845,7 @@ salary_degree <- data.frame(
 
 # Scatterplot
 ggplot(salary_degree, aes(x = Salary, y = Degree)) +
+  geom_smooth(method = "loess", se = FALSE, color = "red", linetype = "dashed") +
   geom_point() +
   labs(title = "Scatterplot of Salary vs. Degree Centrality",
        x = "Salary", y = "Degree Centrality") +
@@ -815,8 +856,16 @@ ggplot(salary_degree, aes(x = Salary, y = Degree)) +
     axis.text = element_text(size = 12)
   )
 ```
+Die rote Linie zeigt einen flachen Trend ohne starke Korrelation in diesem Scatterplot zwischen Gehalt und Degree Centrality.
 
+Der weitgehend flache Verlauf der Trendlinie lässt den Schluss zu, dass kein klarer Zusammenhang zwischen der Degree Centrality und den Gehältern besteht.
+Dies könnte implizieren, dass die Anzahl direkter Wettbewerber ( Degree Centrality) für sich genommen keinen signifikanten Einfluss auf das Gehaltsniveau eines Unternehmens ausübt.
 
+Ein kleiner Anstieg des Gehalts ist insbesondere im Bereich zwischen 100 und 150 zu verzeichnen, was darauf hindeutet, dass Unternehmen mit mittlerem Gehaltsniveau tendenziell mehr direkte Wettbewerber haben. Diese Entwicklung lässt sich dadurch erklären, dass Unternehmen mit mittleren Gehaltsniveaus in stärker besetzten Märkten tätig sind, in denen eine größere Anzahl an Unternehmen um Talente konkurriert.
+
+Die meisten Werte der Degree Centrality sind relativ niedrig, was darauf hindeutet, dass eine Vielzahl von Unternehmen lediglich eine geringe Anzahl direkter Wettbewerber aufweist. Einige Unternehmen mit hoher Degree Centrality und niedrigen bis mittleren Gehältern heben sich jedoch von der Gesamtheit ab. Es ist möglich, dass diese Unternehmen in stark umkämpften Märkten tätig sind, jedoch nicht über die erforderlichen Ressourcen verfügen, um hohe Gehälter zu offerieren.
+
+Ein Vergleich der Degree Centrality mit der Betweenness Centrality zeigt, dass die Degree Centrality einen geringeren Einfluss auf das Gehalt zu haben scheint. Dies lässt den Schluss zu, dass nicht die Anzahl der direkten Wettbewerber, sondern die Position eines Unternehmens als strategischer Vermittler im Netzwerk (Betweenness) einflussreicher für die Höhe des Gehalts ist.
 
 ### Eigenvector-Zentralität
 Unternehmen mit hoher Eigenvector Centrality stehen nicht nur in Konkurrenz zu einer Vielzahl von Unternehmen, 
@@ -830,7 +879,7 @@ um den Marktstandards und den Anforderungen eines zentralen Wettbewerbsnetzwerks
 
 ```{r}
 # Berechne die Eigenvector-Centrality und sortiere sie absteigend
-top_eigenvector <- head(sort(eigenvector_centrality, decreasing = TRUE), 5)
+top_eigenvector <- head(sort(eigenvector_centrality$vector, decreasing = TRUE), 5)
 
 # Erstelle ein DataFrame mit den Namen der Unternehmen und ihrer Eigenvector-Centrality
 top_eigenvector_df <- data.frame(
@@ -845,15 +894,22 @@ kable(top_eigenvector_df, format = "latex", booktabs = TRUE, align = "l") %>%
 ```
 
 ```{r}
+# Berechne die Eigenvector-Centrality und sortiere sie absteigend
+eigenvector_centrality <- evcent(g_competitors_zentralität, directed = FALSE)$vector
+
 # Zusammenhang zwischen durchschnittliches Gehalt und Eigenvector-Zentralität
 salary_eigenvector <- data.frame(
   Salary = salary_data$AverageSalary,
   Eigenvector = eigenvector_centrality[match(salary_data$`Company Name`, names(eigenvector_centrality))]
 )
 
-# Scatterplot
+# Entferne NA-Werte, die durch fehlende Übereinstimmungen entstehen könnten
+salary_eigenvector <- na.omit(salary_eigenvector)
+
+# Scatterplot mit roter, gestrichelter Trendlinie
 ggplot(salary_eigenvector, aes(x = Salary, y = Eigenvector)) +
   geom_point() +
+  geom_smooth(method = "loess", se = FALSE, color = "red", linetype = "dashed") +
   labs(title = "Scatterplot of Salary vs. Eigenvector Centrality",
        x = "Salary", y = "Eigenvector Centrality") +
   theme_minimal() +
@@ -876,8 +932,10 @@ Die Anwendung von Community-Detection-Methoden, wie beispielsweise Louvain oder 
 Im Rahmen der Klassifizierung und Visualisierung erfolgt eine farbliche Markierung der identifizierten Cluster im Netzwerk, um eine bessere Übersicht über die Wettbewerbsgruppen zu gewinnen.
 
 Im Rahmen der Untersuchung wird ermittelt, ob Cluster existieren, in denen besonders hohe oder niedrige Gehälter überwiegen, und ob diese Cluster eine gemeinsame Markt- oder Branchenstruktur aufweisen.
+
 ### Clustering Identifikation
-```{r}
+
+```{r, fig.width=15, fig.height=15}
 # Louvain Community Detection
 louvain_community <- cluster_louvain(g_direct_competitors, resolution = 0.1)
 
@@ -907,9 +965,9 @@ plot(g_direct_competitors, vertex.label = NA,
      vertex.size = 3,  # Kleinere Knoten
      edge.width = 1 * E(g_direct_competitors)$weight,  # Reduzierte Gewichtung der Kanten
      edge.arrow.size = 1,
-     main = "Unternehmensnetzwerk mit Community-Detection (Louvain)",
-     layout = layout_with_fr
+     layout = layout_with_fr,
 )
+title(main = "Unternehmensnetzwerk mit Community-Detection (Louvain)", cex.main = 2)
 ```
 
 
