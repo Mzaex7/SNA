@@ -31,6 +31,10 @@ Zunächst müssen die benötigten Bibliotheken installiert werden:
 - $ install.packages("ggplot2")
 - $ install.packages("RColorBrewer")
 - $ install.packages("skimr")
+- $ install.packages("htmlwidgets")
+
+- $ install.packages("cluster")
+- $ install.packages("dendextend")
 
 Und anschließend geladen werden:
 ```{r setup, message=FALSE, warning=FALSE}
@@ -45,6 +49,11 @@ library(webshot)
 library(ggplot2)
 library(RColorBrewer)
 library(skimr)
+library(htmlwidgets)
+
+
+library(cluster)
+library(dendextend)
 ```
 
 
@@ -386,140 +395,8 @@ print(data %>% select(`Job Title`, Job_simp) %>% unique())
 
 Nachdem die Bereinigung des Datensatzes nun abgeschlossen ist, kann mit der Analyse begonnen werden.
 
-## Geografische Vorbetrachtung
-Da bei der Betrachtung der Wettbewerbsstruktur die geografische Nähe von Unternehmen auch eine Rolle spielen kann, 
-soll zunächst ein Netzwerk erstellt werden, das auf der geografischen Nähe von Unternehmen basiert. 
-Diese annahme beruht darauf, dass Unternehmen in derselben Region wahrscheinlich ähnliche Gehälter anbieten.
-Dies soll Überprüft werden um diese Arbeit um eine weiter Dimension zu erweitern.
 
-### Erstellung eines Geografischen Netzwerkes
-Die Gewichtung erfolgt linear, wobei jeder Standort eine Grundgröße von 3 hat, und für jedes Unternehmen an diesem Standort wird die Größe um 0.5 erhöht.
-Ab einer Größe von 4.5 wird die Farbe des Standorts geändert, um die Standorte mit mehreren Unternehmen hervorzuheben.
 
-```{r, fig.height=15, fig.width=15}
-# Aus Gründen der Sichtbarkeit, werden bloß Locations mit mehr als einem
-# Unternehmen dargestellt.
-
-# Extract relevant columns for geographic visualization
-edges_geo <- data %>%
-  select(Company = `Company Name`, Location = `Location`) %>%
-  distinct()
-
-# Calculate the number of companies per location and filter for locations
-# with more than one company
-location_counts <- edges_geo %>%
-  group_by(Location) %>%
-  summarise(Company_Count = n()) %>%
-  filter(Company_Count > 1)  # Keep only locations with more than one company
-
-# Filter edges to include only connections for locations with more than
-# one company
-filtered_edges <- edges_geo %>%
-  filter(Location %in% location_counts$Location)
-
-# Create an igraph object for geographic visualization
-network_geo <- graph_from_data_frame(filtered_edges, directed = FALSE)
-
-# Set vertex colors based on whether the node is a company or a location
-company_colors <- "blue"
-location_colors <- rainbow(nrow(location_counts))
-
-# Set vertex size based on the number of companies at each location
-vertex_sizes <- ifelse(V(network_geo)$name %in% location_counts$Location,
-                       3 + location_counts$Company_Count[
-                         match(V(network_geo)$name, location_counts$Location)
-                       ] * 0.5,  # Linear scaling factor with minimum size 3
-                       3) # Default size for companies
-
-# Assign colors and sizes to vertices
-V(network_geo)$size <- vertex_sizes
-V(network_geo)$color <- ifelse(V(network_geo)$name %in% location_counts$Location &
-                               vertex_sizes > 4.5,
-                               location_colors[match(V(network_geo)$name, location_counts$Location)],
-                               "grey")
-
-# Plot the network
-plot(network_geo,
-     vertex.label = NA,  # Remove labels from the plot
-     vertex.size = V(network_geo)$size,
-     vertex.color = V(network_geo)$color,
-     edge.arrow.size = 0.3,
-     layout = layout_with_fr,
-)
-
-# Add legend for locations with size > 4.5
-location_indices <- match(location_counts$Location, V(network_geo)$name)
-large_locations <- location_counts$Location[vertex_sizes[location_indices] > 4.5]
-
-large_location_colors <- location_colors[
-  match(large_locations, location_counts$Location)
-]
-legend("topright",
-       legend = large_locations,
-       col = large_location_colors,
-       pch = 19,
-       title = "Locations")
-
-title(main = "Geografisches Netzwerk basierend auf Unternehmensstandorten", cex.main = 2)
-
-```
-
-Wie zu erwarten war, sind die meisten Unternehmen Ballungszentren wie New York, Chicago und San Francisco angesiedelt.
-
-### Vergleich der Gehälter zwischen den Hotspot- und den anderen Regionen
-```{r, fig.height=5, fig.width=6}
-# Ausgabe der farbigen Standorte
-print(large_locations)
-
-# Filterung der Daten für die Hotspot-Regionen
-data_hotspots <- data %>%
-  filter(`Location` %in% large_locations)
-
-# Filterung der Daten für die anderen Regionen
-data_other <- data %>%
-  filter(!`Location` %in% large_locations)
-
-# Durchschnittsgehalt in den Hotspot-Regionen
-avg_salary_hotspots <- mean(data_hotspots$`Salary Estimate`, na.rm = TRUE)
-
-# Durchschnittsgehalt in den anderen Regionen
-avg_salary_other <- mean(data_other$`Salary Estimate`, na.rm = TRUE)
-
-# Erstellung eines Balkendiagramms
-ggplot(data = data.frame(Region = c("Hotspot", "Other"),
-                         Average_Salary = c(avg_salary_hotspots,
-                                            avg_salary_other)),
-       aes(x = Region, y = Average_Salary, fill = Region)) +
-  geom_bar(stat = "identity", width = 0.4) +
-  scale_fill_manual(values = c("Hotspot" = "#FF5733", "Other" = "#33C3FF")) +
-  labs(title = "Average Salary in Hotspot vs. Other Regions",
-       x = "Region",
-       y = "Average Salary") +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
-    axis.title.x = element_text(size = 12, face = "bold"),
-    axis.title.y = element_text(size = 12, face = "bold"),
-    axis.text.x = element_text(size = 12),
-    axis.text.y = element_text(size = 12),
-    legend.position = "none"
-  ) +
-  geom_text(aes(label = round(Average_Salary, 2)), vjust = -0.5, size = 4)
-```
-```{r}
-# Berechnung der Gehaltsunterschiede
-salary_diff <- avg_salary_hotspots - avg_salary_other
-
-# Ausgabe der Gehaltsunterschiede
-print(paste("Durchschnittsgehalt in Hotspot-Regionen:", avg_salary_hotspots))
-print(paste("Durchschnittsgehalt in anderen Regionen:", avg_salary_other))
-print(paste("Durchschnittlicher Gehaltsunterschied:", salary_diff))
-```
-Das Ergebniss zeigt, dass entsprechend der vorher getroffenen Annahme, die Gehälter in den Hotspot-Regionen im Durchschnitt höher sind als in anderen Regionen.
-Dies impliziert eine Korrelation zwischen geografischer Nähe und Gehaltsniveau.
-Eine mögliche Erlärung hierfür könnte die höhere Lebenshaltungskosten in Ballungszentren sein, die höhere Gehälter erforderlich machen.
-
-Deswegen sollen am Ende dieser Arbeit die Ergebnisse der Wettbewerbsanalyse mit den Ergebnissen der geografischen Analyse verglichen und in Bezug gesetz werden.
 
 
 ## Wettbewerbsnetzwerk
@@ -797,14 +674,23 @@ print(outlier)
 Das Unternehmen mit dem höchsten Gehalt und der zweithöchsten Betweenness Centrality ist "Gallup".
 
 ```{r}
-# Wo befindet sich das Unternehmen "Gallup" im Wettbewerbsnetzwerk?
+# Berechne die Nachbarn von "Gallup"
 gallup_neighbors <- neighbors(g_direct_competitors, "Gallup", mode = "all")
 
-# Ausgabe der direkten Wettbewerber von "Gallup"
-print(gallup_neighbors)
+# Erstelle ein DataFrame mit den Namen der direkten Wettbewerber von "Gallup"
+gallup_neighbors_df <- data.frame(
+  Competitors = names(gallup_neighbors),
+  stringsAsFactors = FALSE
+)
+
+# Erstelle eine schön formatierte Tabelle im LaTeX-Format
+kable(gallup_neighbors_df, format = "latex", booktabs = TRUE, align = "l") %>%
+  kable_styling(latex_options = c("striped", "hold_position"), position = "left") %>%
+  column_spec(1, width = "5cm")  # Passe die Spaltenbreite an
 ```
-"Gallup" hat 2 direkte Wettbewerber, das "Booz Allen Hamilton Advisory Board" und "McKinsey & Company".
-Daraus lässt sich schließen, dass "Gallup" eine zentrale Vermittlerrolle zwischen diesen beiden Unternehmen einnimmt,
+
+"Gallup" hat 3 direkte Wettbewerber: "Booz Allen Hamilton", "Advisory Board" und "McKinsey & Company".
+Daraus lässt sich schließen, dass "Gallup" eine zentrale Vermittlerrolle zwischen diesen drei Unternehmen einnimmt,
 was durch die hohe Betweenness Centrality und das hohe Gehalt reflektiert wird.
 
 ### Degree-Zentralität
@@ -832,7 +718,7 @@ top_degree_df <- data.frame(
 )
 
 # Erstelle die Tabelle und zentriere sie links
-kable(top_degree_df, format = "latex", booktabs = TRUE, align = "l") %>%
+kable(gallup_neighbors_df, format = "latex", booktabs = TRUE, align = "l") %>%
   kable_styling(latex_options = c("striped", "hold_position"), position = "left")
 ```
 
@@ -937,7 +823,7 @@ Im Rahmen der Untersuchung wird ermittelt, ob Cluster existieren, in denen beson
 
 ```{r, fig.width=15, fig.height=15}
 # Louvain Community Detection
-louvain_community <- cluster_louvain(g_direct_competitors, resolution = 0.1)
+louvain_community <- cluster_louvain(g_direct_competitors, resolution = 1)
 
 # Walktrap Community Detection
 walktrap_community <- cluster_walktrap(g_direct_competitors, steps = 2)
@@ -970,6 +856,28 @@ plot(g_direct_competitors, vertex.label = NA,
 title(main = "Unternehmensnetzwerk mit Community-Detection (Louvain)", cex.main = 2)
 ```
 
+```{r}
+# Berechne die Größe der Cluster
+cluster_sizes <- table(membership(communities))
+
+# Sortiere die Cluster nach Größe absteigend
+sorted_clusters <- sort(cluster_sizes, decreasing = TRUE)
+
+# Erstelle ein DataFrame mit den Cluster-Informationen
+cluster_info <- data.frame(
+  Cluster = names(sorted_clusters),
+  Size = as.numeric(sorted_clusters),
+  stringsAsFactors = FALSE
+)
+
+# Erstelle die Tabelle und zentriere sie links
+kable(cluster_info, format = "latex", booktabs = TRUE, align = "l") %>%
+  kable_styling(latex_options = c("striped", "hold_position"), position = "left")
+```
+Da das Netzwerk sehr fragmentiert ist, werden im folgenden Schritt bloß die 5 größten Cluster betrachtet.
+
+
+
 
 ### Gehaltsunterschiede zwischen den Clustern
 ```{r}
@@ -1001,27 +909,21 @@ ggplot(avg_salary_per_community, aes(x = factor(Community), y = AverageSalary, f
 ```
 
 
-TODO "Arc Diagramm" zu den regionalen Clustern von der geografischen Netzwerkanalyse
-
-
-## Zurückbesinnen auf die geografische Analyse?
-
-
-
-
 
 
 # Abschließende Betrachtung mittels interaktiver Visualisierung 
+
+Im Folgenden wird dem Leser eine interaktive Visualisierung präsentiert, welche ihm die Möglichkeit bietet, die Ergebnisse der Wettbewerbsanalyse eigenständig zu explorieren, bevor die Schlussfolgerungen und Empfehlungen dargelegt werden.
+
 ```{r}
 closeness_centrality <- closeness(g_direct_competitors)
 clustering_coeff <- transitivity(g_direct_competitors, type = "local")
 ```
 
-
-
 ```{r}
+
 # Prepare data for visNetwork
-'nodes <- data.frame(id = V(g_direct_competitors)$name,
+nodes <- data.frame(id = V(g_direct_competitors)$name,
                     label = V(g_direct_competitors)$name,
                     group = membership(communities),
                     value = degree_centrality,
@@ -1033,7 +935,7 @@ clustering_coeff <- transitivity(g_direct_competitors, type = "local")
 edges <- data.frame(from = as.character(edges$from), to = as.character(edges$to))
 
 # Create interactive network visualization
-visNetwork(nodes, edges) %>%
+network <- visNetwork(nodes, edges) %>%
   visOptions(highlightNearest = TRUE, nodesIdSelection = TRUE) %>%
   visGroups(groupname = "1", color = "red") %>%
   visGroups(groupname = "2", color = "blue") %>%
@@ -1043,8 +945,10 @@ visNetwork(nodes, edges) %>%
   visGroups(groupname = "6", color = "orange") %>%
   visGroups(groupname = "7", color = "pink") %>%
   visLayout(randomSeed = 123) %>%
-  visLegend()'
+  visLegend()
 
+# Speichere die interaktive Visualisierung als HTML-Datei
+saveWidget(network, "network.html", selfcontained = TRUE)
 
 # Fügt ein Bild der interaktiven Netzwerkvisualisierung hinzu
 # knitr::include_graphics("interaktive_Netzwerke_Bilder/Übersicht.png")
@@ -1052,8 +956,8 @@ visNetwork(nodes, edges) %>%
 # knitr::include_graphics("interaktive_Netzwerke_Bilder/NVDIA.png")
 
 ```
-Zugriff auf die interaktive Visualisierung über das Repository (Dateiname: network.html): https://github.com/Mzaex7/SNA 
 
+Die Ausführung des Codes resultiert in der Speicherung der interaktiven Visualisierung unter dem Namen "network.html" im Arbeitsverzeichnis. Diese kann aufgerufen werden, um explorativ die Ergebnisse zu untersuchen.
 
 
 
@@ -1071,6 +975,157 @@ Diskutiere die Bedeutung der Wettbewerbsstruktur und welche Unternehmen durch ih
 
 Praktische Empfehlungen:
 Leite Handlungsempfehlungen für Berufseinsteiger und Unternehmen ab: Wo und wie sollten Fachkräfte ihre Karrieresuche fokussieren? Welche Unternehmen sollten strategische Investitionen in Gehälter und Talentförderung in Erwägung ziehen?
+
+Ausblick:
+Weiterreichende Untersuchung des Zusammenhangs zwischen dem Einfluss von.
+Im Rahmen dieser Arbeit wurde bereits ein Schritt in diese Richtung getan(siehe Anhang)
+
+
+
+
+\newpage
+# Anhang
+## Geografische Betrachtung
+Da bei der Betrachtung der Wettbewerbsstruktur die geografische Nähe von Unternehmen auch eine Rolle spielen kann, 
+soll zunächst ein Netzwerk erstellt werden, das auf der geografischen Nähe von Unternehmen basiert. 
+Diese annahme beruht darauf, dass Unternehmen in derselben Region wahrscheinlich ähnliche Gehälter anbieten.
+Dies soll Überprüft werden um diese Arbeit um eine weiter Dimension zu erweitern.
+
+### Erstellung eines Geografischen Netzwerkes
+Die Gewichtung erfolgt linear, wobei jeder Standort eine Grundgröße von 3 hat, und für jedes Unternehmen an diesem Standort wird die Größe um 0.5 erhöht.
+Ab einer Größe von 4.5 wird die Farbe des Standorts geändert, um die Standorte mit mehreren Unternehmen hervorzuheben.
+
+```{r, fig.height=15, fig.width=15}
+# Aus Gründen der Sichtbarkeit, werden bloß Locations mit mehr als einem
+# Unternehmen dargestellt.
+
+# Extract relevant columns for geographic visualization
+edges_geo <- data %>%
+  select(Company = `Company Name`, Location = `Location`) %>%
+  distinct()
+
+# Calculate the number of companies per location and filter for locations
+# with more than one company
+location_counts <- edges_geo %>%
+  group_by(Location) %>%
+  summarise(Company_Count = n()) %>%
+  filter(Company_Count > 1)  # Keep only locations with more than one company
+
+# Filter edges to include only connections for locations with more than
+# one company
+filtered_edges <- edges_geo %>%
+  filter(Location %in% location_counts$Location)
+
+# Create an igraph object for geographic visualization
+network_geo <- graph_from_data_frame(filtered_edges, directed = FALSE)
+
+# Set vertex colors based on whether the node is a company or a location
+company_colors <- "blue"
+location_colors <- rainbow(nrow(location_counts))
+
+# Set vertex size based on the number of companies at each location
+vertex_sizes <- ifelse(V(network_geo)$name %in% location_counts$Location,
+                       3 + location_counts$Company_Count[
+                         match(V(network_geo)$name, location_counts$Location)
+                       ] * 0.5,  # Linear scaling factor with minimum size 3
+                       3) # Default size for companies
+
+# Assign colors and sizes to vertices
+V(network_geo)$size <- vertex_sizes
+V(network_geo)$color <- ifelse(V(network_geo)$name %in% location_counts$Location &
+                               vertex_sizes > 4.5,
+                               location_colors[match(V(network_geo)$name, location_counts$Location)],
+                               "grey")
+
+# Plot the network
+plot(network_geo,
+     vertex.label = NA,  # Remove labels from the plot
+     vertex.size = V(network_geo)$size,
+     vertex.color = V(network_geo)$color,
+     edge.arrow.size = 0.3,
+     layout = layout_with_fr,
+)
+
+# Add legend for locations with size > 4.5
+location_indices <- match(location_counts$Location, V(network_geo)$name)
+large_locations <- location_counts$Location[vertex_sizes[location_indices] > 4.5]
+
+large_location_colors <- location_colors[
+  match(large_locations, location_counts$Location)
+]
+legend("topright",
+       legend = large_locations,
+       col = large_location_colors,
+       pch = 19,
+       title = "Locations")
+
+title(main = "Geografisches Netzwerk basierend auf Unternehmensstandorten", cex.main = 2)
+
+```
+
+Wie zu erwarten war, sind die meisten Unternehmen in Ballungszentren wie New York, Chicago und San Francisco angesiedelt.
+
+
+### Vergleich der Gehälter zwischen den Hotspot- und den anderen Regionen
+```{r, fig.height=5, fig.width=6}
+# Ausgabe der farbigen Standorte
+print(large_locations)
+
+# Filterung der Daten für die Hotspot-Regionen
+data_hotspots <- data %>%
+  filter(`Location` %in% large_locations)
+
+# Filterung der Daten für die anderen Regionen
+data_other <- data %>%
+  filter(!`Location` %in% large_locations)
+
+# Durchschnittsgehalt in den Hotspot-Regionen
+avg_salary_hotspots <- mean(data_hotspots$`Salary Estimate`, na.rm = TRUE)
+
+# Durchschnittsgehalt in den anderen Regionen
+avg_salary_other <- mean(data_other$`Salary Estimate`, na.rm = TRUE)
+
+# Erstellung eines Balkendiagramms
+ggplot(data = data.frame(Region = c("Hotspot", "Other"),
+                         Average_Salary = c(avg_salary_hotspots,
+                                            avg_salary_other)),
+       aes(x = Region, y = Average_Salary, fill = Region)) +
+  geom_bar(stat = "identity", width = 0.4) +
+  scale_fill_manual(values = c("Hotspot" = "#FF5733", "Other" = "#33C3FF")) +
+  labs(title = "Average Salary in Hotspot vs. Other Regions",
+       x = "Region",
+       y = "Average Salary") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    axis.title.x = element_text(size = 12, face = "bold"),
+    axis.title.y = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 12),
+    axis.text.y = element_text(size = 12),
+    legend.position = "none"
+  ) +
+  geom_text(aes(label = round(Average_Salary, 2)), vjust = -0.5, size = 4)
+```
+```{r}
+# Berechnung der Gehaltsunterschiede
+salary_diff <- avg_salary_hotspots - avg_salary_other
+
+# Ausgabe der Gehaltsunterschiede
+print(paste("Durchschnittsgehalt in Hotspot-Regionen:", avg_salary_hotspots))
+print(paste("Durchschnittsgehalt in anderen Regionen:", avg_salary_other))
+print(paste("Durchschnittlicher Gehaltsunterschied:", salary_diff))
+```
+Das Ergebniss zeigt, dass entsprechend der vorher getroffenen Annahme, die Gehälter in den Hotspot-Regionen im Durchschnitt höher sind als in anderen Regionen.
+Dies impliziert eine Korrelation zwischen geografischer Nähe und Gehaltsniveau.
+Eine mögliche Erlärung hierfür könnte die höhere Lebenshaltungskosten in Ballungszentren sein, die höhere Gehälter erforderlich machen.
+
+
+
+
+
+
+
+
 
 
 \newpage

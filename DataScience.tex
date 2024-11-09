@@ -156,7 +156,6 @@ Science-Bereich:}
 Zunächst müssen die benötigten Bibliotheken installiert werden:
 
 \begin{itemize}
-\tightlist
 \item
   \$ install.packages(``tidyverse'')
 \item
@@ -179,6 +178,12 @@ Zunächst müssen die benötigten Bibliotheken installiert werden:
   \$ install.packages(``RColorBrewer'')
 \item
   \$ install.packages(``skimr'')
+\item
+  \$ install.packages(``htmlwidgets'')
+\item
+  \$ install.packages(``cluster'')
+\item
+  \$ install.packages(``dendextend'')
 \end{itemize}
 
 Und anschließend geladen werden:
@@ -196,6 +201,11 @@ Und anschließend geladen werden:
 \FunctionTok{library}\NormalTok{(ggplot2)}
 \FunctionTok{library}\NormalTok{(RColorBrewer)}
 \FunctionTok{library}\NormalTok{(skimr)}
+\FunctionTok{library}\NormalTok{(htmlwidgets)}
+
+
+\FunctionTok{library}\NormalTok{(cluster)}
+\FunctionTok{library}\NormalTok{(dendextend)}
 \end{Highlighting}
 \end{Shaded}
 
@@ -1036,199 +1046,6 @@ entfernt.
 Nachdem die Bereinigung des Datensatzes nun abgeschlossen ist, kann mit
 der Analyse begonnen werden.
 
-\subsection{Geografische
-Vorbetrachtung}\label{geografische-vorbetrachtung}
-
-Da bei der Betrachtung der Wettbewerbsstruktur die geografische Nähe von
-Unternehmen auch eine Rolle spielen kann, soll zunächst ein Netzwerk
-erstellt werden, das auf der geografischen Nähe von Unternehmen basiert.
-Diese annahme beruht darauf, dass Unternehmen in derselben Region
-wahrscheinlich ähnliche Gehälter anbieten. Dies soll Überprüft werden um
-diese Arbeit um eine weiter Dimension zu erweitern.
-
-\subsubsection{Erstellung eines Geografischen
-Netzwerkes}\label{erstellung-eines-geografischen-netzwerkes}
-
-Die Gewichtung erfolgt linear, wobei jeder Standort eine Grundgröße von
-3 hat, und für jedes Unternehmen an diesem Standort wird die Größe um
-0.5 erhöht. Ab einer Größe von 4.5 wird die Farbe des Standorts
-geändert, um die Standorte mit mehreren Unternehmen hervorzuheben.
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Aus Gründen der Sichtbarkeit, werden bloß Locations mit mehr als einem}
-\CommentTok{\# Unternehmen dargestellt.}
-
-\CommentTok{\# Extract relevant columns for geographic visualization}
-\NormalTok{edges\_geo }\OtherTok{\textless{}{-}}\NormalTok{ data }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{select}\NormalTok{(}\AttributeTok{Company =} \StringTok{\textasciigrave{}}\AttributeTok{Company Name}\StringTok{\textasciigrave{}}\NormalTok{, }\AttributeTok{Location =} \StringTok{\textasciigrave{}}\AttributeTok{Location}\StringTok{\textasciigrave{}}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{distinct}\NormalTok{()}
-
-\CommentTok{\# Calculate the number of companies per location and filter for locations}
-\CommentTok{\# with more than one company}
-\NormalTok{location\_counts }\OtherTok{\textless{}{-}}\NormalTok{ edges\_geo }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{group\_by}\NormalTok{(Location) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{summarise}\NormalTok{(}\AttributeTok{Company\_Count =} \FunctionTok{n}\NormalTok{()) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{filter}\NormalTok{(Company\_Count }\SpecialCharTok{\textgreater{}} \DecValTok{1}\NormalTok{)  }\CommentTok{\# Keep only locations with more than one company}
-
-\CommentTok{\# Filter edges to include only connections for locations with more than}
-\CommentTok{\# one company}
-\NormalTok{filtered\_edges }\OtherTok{\textless{}{-}}\NormalTok{ edges\_geo }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{filter}\NormalTok{(Location }\SpecialCharTok{\%in\%}\NormalTok{ location\_counts}\SpecialCharTok{$}\NormalTok{Location)}
-
-\CommentTok{\# Create an igraph object for geographic visualization}
-\NormalTok{network\_geo }\OtherTok{\textless{}{-}} \FunctionTok{graph\_from\_data\_frame}\NormalTok{(filtered\_edges, }\AttributeTok{directed =} \ConstantTok{FALSE}\NormalTok{)}
-
-\CommentTok{\# Set vertex colors based on whether the node is a company or a location}
-\NormalTok{company\_colors }\OtherTok{\textless{}{-}} \StringTok{"blue"}
-\NormalTok{location\_colors }\OtherTok{\textless{}{-}} \FunctionTok{rainbow}\NormalTok{(}\FunctionTok{nrow}\NormalTok{(location\_counts))}
-
-\CommentTok{\# Set vertex size based on the number of companies at each location}
-\NormalTok{vertex\_sizes }\OtherTok{\textless{}{-}} \FunctionTok{ifelse}\NormalTok{(}\FunctionTok{V}\NormalTok{(network\_geo)}\SpecialCharTok{$}\NormalTok{name }\SpecialCharTok{\%in\%}\NormalTok{ location\_counts}\SpecialCharTok{$}\NormalTok{Location,}
-                       \DecValTok{3} \SpecialCharTok{+}\NormalTok{ location\_counts}\SpecialCharTok{$}\NormalTok{Company\_Count[}
-                         \FunctionTok{match}\NormalTok{(}\FunctionTok{V}\NormalTok{(network\_geo)}\SpecialCharTok{$}\NormalTok{name, location\_counts}\SpecialCharTok{$}\NormalTok{Location)}
-\NormalTok{                       ] }\SpecialCharTok{*} \FloatTok{0.5}\NormalTok{,  }\CommentTok{\# Linear scaling factor with minimum size 3}
-                       \DecValTok{3}\NormalTok{) }\CommentTok{\# Default size for companies}
-
-\CommentTok{\# Assign colors and sizes to vertices}
-\FunctionTok{V}\NormalTok{(network\_geo)}\SpecialCharTok{$}\NormalTok{size }\OtherTok{\textless{}{-}}\NormalTok{ vertex\_sizes}
-\FunctionTok{V}\NormalTok{(network\_geo)}\SpecialCharTok{$}\NormalTok{color }\OtherTok{\textless{}{-}} \FunctionTok{ifelse}\NormalTok{(}\FunctionTok{V}\NormalTok{(network\_geo)}\SpecialCharTok{$}\NormalTok{name }\SpecialCharTok{\%in\%}\NormalTok{ location\_counts}\SpecialCharTok{$}\NormalTok{Location }\SpecialCharTok{\&}
-\NormalTok{                               vertex\_sizes }\SpecialCharTok{\textgreater{}} \FloatTok{4.5}\NormalTok{,}
-\NormalTok{                               location\_colors[}\FunctionTok{match}\NormalTok{(}\FunctionTok{V}\NormalTok{(network\_geo)}\SpecialCharTok{$}\NormalTok{name, location\_counts}\SpecialCharTok{$}\NormalTok{Location)],}
-                               \StringTok{"grey"}\NormalTok{)}
-
-\CommentTok{\# Plot the network}
-\FunctionTok{plot}\NormalTok{(network\_geo,}
-     \AttributeTok{vertex.label =} \ConstantTok{NA}\NormalTok{,  }\CommentTok{\# Remove labels from the plot}
-     \AttributeTok{vertex.size =} \FunctionTok{V}\NormalTok{(network\_geo)}\SpecialCharTok{$}\NormalTok{size,}
-     \AttributeTok{vertex.color =} \FunctionTok{V}\NormalTok{(network\_geo)}\SpecialCharTok{$}\NormalTok{color,}
-     \AttributeTok{edge.arrow.size =} \FloatTok{0.3}\NormalTok{,}
-     \AttributeTok{layout =}\NormalTok{ layout\_with\_fr,}
-\NormalTok{)}
-
-\CommentTok{\# Add legend for locations with size \textgreater{} 4.5}
-\NormalTok{location\_indices }\OtherTok{\textless{}{-}} \FunctionTok{match}\NormalTok{(location\_counts}\SpecialCharTok{$}\NormalTok{Location, }\FunctionTok{V}\NormalTok{(network\_geo)}\SpecialCharTok{$}\NormalTok{name)}
-\NormalTok{large\_locations }\OtherTok{\textless{}{-}}\NormalTok{ location\_counts}\SpecialCharTok{$}\NormalTok{Location[vertex\_sizes[location\_indices] }\SpecialCharTok{\textgreater{}} \FloatTok{4.5}\NormalTok{]}
-
-\NormalTok{large\_location\_colors }\OtherTok{\textless{}{-}}\NormalTok{ location\_colors[}
-  \FunctionTok{match}\NormalTok{(large\_locations, location\_counts}\SpecialCharTok{$}\NormalTok{Location)}
-\NormalTok{]}
-\FunctionTok{legend}\NormalTok{(}\StringTok{"topright"}\NormalTok{,}
-       \AttributeTok{legend =}\NormalTok{ large\_locations,}
-       \AttributeTok{col =}\NormalTok{ large\_location\_colors,}
-       \AttributeTok{pch =} \DecValTok{19}\NormalTok{,}
-       \AttributeTok{title =} \StringTok{"Locations"}\NormalTok{)}
-
-\FunctionTok{title}\NormalTok{(}\AttributeTok{main =} \StringTok{"Geografisches Netzwerk basierend auf Unternehmensstandorten"}\NormalTok{, }\AttributeTok{cex.main =} \DecValTok{2}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-16-1.pdf}}
-
-Wie zu erwarten war, sind die meisten Unternehmen Ballungszentren wie
-New York, Chicago und San Francisco angesiedelt.
-
-\subsubsection{Vergleich der Gehälter zwischen den Hotspot- und den
-anderen
-Regionen}\label{vergleich-der-gehuxe4lter-zwischen-den-hotspot--und-den-anderen-regionen}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Ausgabe der farbigen Standorte}
-\FunctionTok{print}\NormalTok{(large\_locations)}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{verbatim}
-## [1] "Chicago, IL"       "New York, NY"      "San Francisco, CA"
-\end{verbatim}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Filterung der Daten für die Hotspot{-}Regionen}
-\NormalTok{data\_hotspots }\OtherTok{\textless{}{-}}\NormalTok{ data }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{filter}\NormalTok{(}\StringTok{\textasciigrave{}}\AttributeTok{Location}\StringTok{\textasciigrave{}} \SpecialCharTok{\%in\%}\NormalTok{ large\_locations)}
-
-\CommentTok{\# Filterung der Daten für die anderen Regionen}
-\NormalTok{data\_other }\OtherTok{\textless{}{-}}\NormalTok{ data }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{filter}\NormalTok{(}\SpecialCharTok{!}\StringTok{\textasciigrave{}}\AttributeTok{Location}\StringTok{\textasciigrave{}} \SpecialCharTok{\%in\%}\NormalTok{ large\_locations)}
-
-\CommentTok{\# Durchschnittsgehalt in den Hotspot{-}Regionen}
-\NormalTok{avg\_salary\_hotspots }\OtherTok{\textless{}{-}} \FunctionTok{mean}\NormalTok{(data\_hotspots}\SpecialCharTok{$}\StringTok{\textasciigrave{}}\AttributeTok{Salary Estimate}\StringTok{\textasciigrave{}}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)}
-
-\CommentTok{\# Durchschnittsgehalt in den anderen Regionen}
-\NormalTok{avg\_salary\_other }\OtherTok{\textless{}{-}} \FunctionTok{mean}\NormalTok{(data\_other}\SpecialCharTok{$}\StringTok{\textasciigrave{}}\AttributeTok{Salary Estimate}\StringTok{\textasciigrave{}}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)}
-
-\CommentTok{\# Erstellung eines Balkendiagramms}
-\FunctionTok{ggplot}\NormalTok{(}\AttributeTok{data =} \FunctionTok{data.frame}\NormalTok{(}\AttributeTok{Region =} \FunctionTok{c}\NormalTok{(}\StringTok{"Hotspot"}\NormalTok{, }\StringTok{"Other"}\NormalTok{),}
-                         \AttributeTok{Average\_Salary =} \FunctionTok{c}\NormalTok{(avg\_salary\_hotspots,}
-\NormalTok{                                            avg\_salary\_other)),}
-       \FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Region, }\AttributeTok{y =}\NormalTok{ Average\_Salary, }\AttributeTok{fill =}\NormalTok{ Region)) }\SpecialCharTok{+}
-  \FunctionTok{geom\_bar}\NormalTok{(}\AttributeTok{stat =} \StringTok{"identity"}\NormalTok{, }\AttributeTok{width =} \FloatTok{0.4}\NormalTok{) }\SpecialCharTok{+}
-  \FunctionTok{scale\_fill\_manual}\NormalTok{(}\AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"Hotspot"} \OtherTok{=} \StringTok{"\#FF5733"}\NormalTok{, }\StringTok{"Other"} \OtherTok{=} \StringTok{"\#33C3FF"}\NormalTok{)) }\SpecialCharTok{+}
-  \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Average Salary in Hotspot vs. Other Regions"}\NormalTok{,}
-       \AttributeTok{x =} \StringTok{"Region"}\NormalTok{,}
-       \AttributeTok{y =} \StringTok{"Average Salary"}\NormalTok{) }\SpecialCharTok{+}
-  \FunctionTok{theme\_minimal}\NormalTok{() }\SpecialCharTok{+}
-  \FunctionTok{theme}\NormalTok{(}
-    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{hjust =} \FloatTok{0.5}\NormalTok{, }\AttributeTok{size =} \DecValTok{14}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
-    \AttributeTok{axis.title.x =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{12}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
-    \AttributeTok{axis.title.y =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{12}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
-    \AttributeTok{axis.text.x =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{12}\NormalTok{),}
-    \AttributeTok{axis.text.y =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{12}\NormalTok{),}
-    \AttributeTok{legend.position =} \StringTok{"none"}
-\NormalTok{  ) }\SpecialCharTok{+}
-  \FunctionTok{geom\_text}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{label =} \FunctionTok{round}\NormalTok{(Average\_Salary, }\DecValTok{2}\NormalTok{)), }\AttributeTok{vjust =} \SpecialCharTok{{-}}\FloatTok{0.5}\NormalTok{, }\AttributeTok{size =} \DecValTok{4}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-17-1.pdf}}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Berechnung der Gehaltsunterschiede}
-\NormalTok{salary\_diff }\OtherTok{\textless{}{-}}\NormalTok{ avg\_salary\_hotspots }\SpecialCharTok{{-}}\NormalTok{ avg\_salary\_other}
-
-\CommentTok{\# Ausgabe der Gehaltsunterschiede}
-\FunctionTok{print}\NormalTok{(}\FunctionTok{paste}\NormalTok{(}\StringTok{"Durchschnittsgehalt in Hotspot{-}Regionen:"}\NormalTok{, avg\_salary\_hotspots))}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{verbatim}
-## [1] "Durchschnittsgehalt in Hotspot-Regionen: 117.223880597015"
-\end{verbatim}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\FunctionTok{print}\NormalTok{(}\FunctionTok{paste}\NormalTok{(}\StringTok{"Durchschnittsgehalt in anderen Regionen:"}\NormalTok{, avg\_salary\_other))}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{verbatim}
-## [1] "Durchschnittsgehalt in anderen Regionen: 103.59"
-\end{verbatim}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\FunctionTok{print}\NormalTok{(}\FunctionTok{paste}\NormalTok{(}\StringTok{"Durchschnittlicher Gehaltsunterschied:"}\NormalTok{, salary\_diff))}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{verbatim}
-## [1] "Durchschnittlicher Gehaltsunterschied: 13.6338805970149"
-\end{verbatim}
-
-Das Ergebniss zeigt, dass entsprechend der vorher getroffenen Annahme,
-die Gehälter in den Hotspot-Regionen im Durchschnitt höher sind als in
-anderen Regionen. Dies impliziert eine Korrelation zwischen
-geografischer Nähe und Gehaltsniveau. Eine mögliche Erlärung hierfür
-könnte die höhere Lebenshaltungskosten in Ballungszentren sein, die
-höhere Gehälter erforderlich machen.
-
-Deswegen sollen am Ende dieser Arbeit die Ergebnisse der
-Wettbewerbsanalyse mit den Ergebnissen der geografischen Analyse
-verglichen und in Bezug gesetz werden.
-
 \subsection{Wettbewerbsnetzwerk}\label{wettbewerbsnetzwerk}
 
 In diesem Abschnitt wird mit der eigentlichen Analyse, dem Ziel dieser
@@ -1309,7 +1126,7 @@ während direkte Wettbewerber in rot hervorgehoben sind.
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-19-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-16-1.pdf}}
 Es lassen sich einige interessante Beobachtungen aus dem Netzwerk
 ziehen. Einerseits sind ganz eindeutig Branchencluster zu erkennen, die
 auf die Branchenzugehörigkeit der Unternehmen hinweisen.
@@ -1414,7 +1231,7 @@ Wettbewerbsbeziehungen zu erhöhen.
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-21-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-18-1.pdf}}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -1565,7 +1382,7 @@ McKinsey \& Company & 462.0000\\
 ## `geom_smooth()` using formula = 'y ~ x'
 \end{verbatim}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-24-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-21-1.pdf}}
 Der Scatterplot veranschaulicht die Korrelation zwischen dem Gehalt auf
 der x-Achse und der Betweenness Centrality auf der y-Achse. Die rote
 Linie zeigt einen nichtlinearen Trend zwischen Gehalt und Betweenness
@@ -1624,24 +1441,37 @@ Betweenness Centrality ist ``Gallup''.
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\CommentTok{\# Wo befindet sich das Unternehmen "Gallup" im Wettbewerbsnetzwerk?}
+\CommentTok{\# Berechne die Nachbarn von "Gallup"}
 \NormalTok{gallup\_neighbors }\OtherTok{\textless{}{-}} \FunctionTok{neighbors}\NormalTok{(g\_direct\_competitors, }\StringTok{"Gallup"}\NormalTok{, }\AttributeTok{mode =} \StringTok{"all"}\NormalTok{)}
 
-\CommentTok{\# Ausgabe der direkten Wettbewerber von "Gallup"}
-\FunctionTok{print}\NormalTok{(gallup\_neighbors)}
+\CommentTok{\# Erstelle ein DataFrame mit den Namen der direkten Wettbewerber von "Gallup"}
+\NormalTok{gallup\_neighbors\_df }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}
+  \AttributeTok{Competitors =} \FunctionTok{names}\NormalTok{(gallup\_neighbors),}
+  \AttributeTok{stringsAsFactors =} \ConstantTok{FALSE}
+\NormalTok{)}
+
+\CommentTok{\# Erstelle eine schön formatierte Tabelle im LaTeX{-}Format}
+\FunctionTok{kable}\NormalTok{(gallup\_neighbors\_df, }\AttributeTok{format =} \StringTok{"latex"}\NormalTok{, }\AttributeTok{booktabs =} \ConstantTok{TRUE}\NormalTok{, }\AttributeTok{align =} \StringTok{"l"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{kable\_styling}\NormalTok{(}\AttributeTok{latex\_options =} \FunctionTok{c}\NormalTok{(}\StringTok{"striped"}\NormalTok{, }\StringTok{"hold\_position"}\NormalTok{), }\AttributeTok{position =} \StringTok{"left"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{column\_spec}\NormalTok{(}\DecValTok{1}\NormalTok{, }\AttributeTok{width =} \StringTok{"5cm"}\NormalTok{)  }\CommentTok{\# Passe die Spaltenbreite an}
 \end{Highlighting}
 \end{Shaded}
 
-\begin{verbatim}
-## + 3/360 vertices, named, from 94d81a7:
-## [1] Booz Allen Hamilton Advisory Board      McKinsey & Company
-\end{verbatim}
+\begin{tabular}{>{\raggedright\arraybackslash}p{5cm}}
+\toprule
+Competitors\\
+\midrule
+\cellcolor{gray!10}{Booz Allen Hamilton}\\
+Advisory Board\\
+\cellcolor{gray!10}{McKinsey \& Company}\\
+\bottomrule
+\end{tabular}
 
-``Gallup'' hat 2 direkte Wettbewerber, das ``Booz Allen Hamilton
-Advisory Board'' und ``McKinsey \& Company''. Daraus lässt sich
+``Gallup'' hat 3 direkte Wettbewerber: ``Booz Allen Hamilton'',
+``Advisory Board'' und ``McKinsey \& Company''. Daraus lässt sich
 schließen, dass ``Gallup'' eine zentrale Vermittlerrolle zwischen diesen
-beiden Unternehmen einnimmt, was durch die hohe Betweenness Centrality
-und das hohe Gehalt reflektiert wird.
+drei Unternehmen einnimmt, was durch die hohe Betweenness Centrality und
+das hohe Gehalt reflektiert wird.
 
 \subsubsection{Degree-Zentralität}\label{degree-zentralituxe4t}
 
@@ -1675,20 +1505,18 @@ haben und gezielt in Gehälter investieren können.
 \NormalTok{)}
 
 \CommentTok{\# Erstelle die Tabelle und zentriere sie links}
-\FunctionTok{kable}\NormalTok{(top\_degree\_df, }\AttributeTok{format =} \StringTok{"latex"}\NormalTok{, }\AttributeTok{booktabs =} \ConstantTok{TRUE}\NormalTok{, }\AttributeTok{align =} \StringTok{"l"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+\FunctionTok{kable}\NormalTok{(gallup\_neighbors\_df, }\AttributeTok{format =} \StringTok{"latex"}\NormalTok{, }\AttributeTok{booktabs =} \ConstantTok{TRUE}\NormalTok{, }\AttributeTok{align =} \StringTok{"l"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
   \FunctionTok{kable\_styling}\NormalTok{(}\AttributeTok{latex\_options =} \FunctionTok{c}\NormalTok{(}\StringTok{"striped"}\NormalTok{, }\StringTok{"hold\_position"}\NormalTok{), }\AttributeTok{position =} \StringTok{"left"}\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
 
-\begin{tabular}{ll}
+\begin{tabular}{l}
 \toprule
-Company & Degree\\
+Competitors\\
 \midrule
-\cellcolor{gray!10}{PNNL} & \cellcolor{gray!10}{30}\\
-Liberty Mutual Insurance & 25\\
-\cellcolor{gray!10}{Fareportal} & \cellcolor{gray!10}{21}\\
-Takeda Pharmaceuticals & 18\\
-\cellcolor{gray!10}{Novetta} & \cellcolor{gray!10}{18}\\
+\cellcolor{gray!10}{Booz Allen Hamilton}\\
+Advisory Board\\
+\cellcolor{gray!10}{McKinsey \& Company}\\
 \bottomrule
 \end{tabular}
 
@@ -1719,7 +1547,7 @@ Takeda Pharmaceuticals & 18\\
 ## `geom_smooth()` using formula = 'y ~ x'
 \end{verbatim}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-28-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-25-1.pdf}}
 Die rote Linie zeigt einen flachen Trend ohne starke Korrelation in
 diesem Scatterplot zwischen Gehalt und Degree Centrality.
 
@@ -1789,9 +1617,9 @@ Anforderungen eines zentralen Wettbewerbsnetzwerks gerecht zu werden.
 Company & Eigenvector\\
 \midrule
 \cellcolor{gray!10}{PNNL} & \cellcolor{gray!10}{1.0000000}\\
+Oak Ridge National Laboratory & 0.5887841\\
+\cellcolor{gray!10}{Los Alamos National Laboratory} & \cellcolor{gray!10}{0.5887841}\\
 National Renewable Energy Lab & 0.5887841\\
-\cellcolor{gray!10}{Oak Ridge National Laboratory} & \cellcolor{gray!10}{0.5887841}\\
-Los Alamos National Laboratory & 0.5887841\\
 \cellcolor{gray!10}{Pacific Northwest National Laboratory} & \cellcolor{gray!10}{0.2000000}\\
 \bottomrule
 \end{tabular}
@@ -1829,7 +1657,7 @@ Los Alamos National Laboratory & 0.5887841\\
 ## `geom_smooth()` using formula = 'y ~ x'
 \end{verbatim}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-30-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-27-1.pdf}}
 
 \subsection{Cluster-Analyse}\label{cluster-analyse}
 
@@ -1852,7 +1680,7 @@ Identifikation}\label{clustering-identifikation}
 \begin{Shaded}
 \begin{Highlighting}[]
 \CommentTok{\# Louvain Community Detection}
-\NormalTok{louvain\_community }\OtherTok{\textless{}{-}} \FunctionTok{cluster\_louvain}\NormalTok{(g\_direct\_competitors, }\AttributeTok{resolution =} \FloatTok{0.1}\NormalTok{)}
+\NormalTok{louvain\_community }\OtherTok{\textless{}{-}} \FunctionTok{cluster\_louvain}\NormalTok{(g\_direct\_competitors, }\AttributeTok{resolution =} \DecValTok{1}\NormalTok{)}
 
 \CommentTok{\# Walktrap Community Detection}
 \NormalTok{walktrap\_community }\OtherTok{\textless{}{-}} \FunctionTok{cluster\_walktrap}\NormalTok{(g\_direct\_competitors, }\AttributeTok{steps =} \DecValTok{2}\NormalTok{)}
@@ -1886,7 +1714,135 @@ Identifikation}\label{clustering-identifikation}
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-31-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-28-1.pdf}}
+Da das Netzwerk sehr fragmentiert ist, werden im folgenden Schritt bloß
+die 5 größten Cluster betrachtet.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Berechne die Größe der Cluster}
+\NormalTok{cluster\_sizes }\OtherTok{\textless{}{-}} \FunctionTok{table}\NormalTok{(}\FunctionTok{membership}\NormalTok{(communities))}
+
+\CommentTok{\# Sortiere die Cluster nach Größe absteigend}
+\NormalTok{sorted\_clusters }\OtherTok{\textless{}{-}} \FunctionTok{sort}\NormalTok{(cluster\_sizes, }\AttributeTok{decreasing =} \ConstantTok{TRUE}\NormalTok{)}
+
+\CommentTok{\# Erstelle ein DataFrame mit den Cluster{-}Informationen}
+\NormalTok{cluster\_info }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}
+  \AttributeTok{Cluster =} \FunctionTok{names}\NormalTok{(sorted\_clusters),}
+  \AttributeTok{Size =} \FunctionTok{as.numeric}\NormalTok{(sorted\_clusters),}
+  \AttributeTok{stringsAsFactors =} \ConstantTok{FALSE}
+\NormalTok{)}
+
+\CommentTok{\# Erstelle die Tabelle und zentriere sie links}
+\FunctionTok{kable}\NormalTok{(cluster\_info, }\AttributeTok{format =} \StringTok{"latex"}\NormalTok{, }\AttributeTok{booktabs =} \ConstantTok{TRUE}\NormalTok{, }\AttributeTok{align =} \StringTok{"l"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{kable\_styling}\NormalTok{(}\AttributeTok{latex\_options =} \FunctionTok{c}\NormalTok{(}\StringTok{"striped"}\NormalTok{, }\StringTok{"hold\_position"}\NormalTok{), }\AttributeTok{position =} \StringTok{"left"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{tabular}{ll}
+\toprule
+Cluster & Size\\
+\midrule
+\cellcolor{gray!10}{1} & \cellcolor{gray!10}{23}\\
+38 & 11\\
+\cellcolor{gray!10}{12} & \cellcolor{gray!10}{10}\\
+37 & 9\\
+\cellcolor{gray!10}{5} & \cellcolor{gray!10}{8}\\
+\addlinespace
+17 & 8\\
+\cellcolor{gray!10}{8} & \cellcolor{gray!10}{7}\\
+21 & 7\\
+\cellcolor{gray!10}{9} & \cellcolor{gray!10}{6}\\
+14 & 6\\
+\addlinespace
+\cellcolor{gray!10}{11} & \cellcolor{gray!10}{5}\\
+57 & 5\\
+\cellcolor{gray!10}{4} & \cellcolor{gray!10}{4}\\
+6 & 4\\
+\cellcolor{gray!10}{7} & \cellcolor{gray!10}{4}\\
+\addlinespace
+10 & 4\\
+\cellcolor{gray!10}{13} & \cellcolor{gray!10}{4}\\
+16 & 4\\
+\cellcolor{gray!10}{18} & \cellcolor{gray!10}{4}\\
+19 & 4\\
+\addlinespace
+\cellcolor{gray!10}{20} & \cellcolor{gray!10}{4}\\
+22 & 4\\
+\cellcolor{gray!10}{24} & \cellcolor{gray!10}{4}\\
+26 & 4\\
+\cellcolor{gray!10}{27} & \cellcolor{gray!10}{4}\\
+\addlinespace
+28 & 4\\
+\cellcolor{gray!10}{29} & \cellcolor{gray!10}{4}\\
+31 & 4\\
+\cellcolor{gray!10}{32} & \cellcolor{gray!10}{4}\\
+34 & 4\\
+\addlinespace
+\cellcolor{gray!10}{35} & \cellcolor{gray!10}{4}\\
+39 & 4\\
+\cellcolor{gray!10}{41} & \cellcolor{gray!10}{4}\\
+42 & 4\\
+\cellcolor{gray!10}{45} & \cellcolor{gray!10}{4}\\
+\addlinespace
+46 & 4\\
+\cellcolor{gray!10}{47} & \cellcolor{gray!10}{4}\\
+48 & 4\\
+\cellcolor{gray!10}{50} & \cellcolor{gray!10}{4}\\
+51 & 4\\
+\addlinespace
+\cellcolor{gray!10}{53} & \cellcolor{gray!10}{4}\\
+54 & 4\\
+\cellcolor{gray!10}{55} & \cellcolor{gray!10}{4}\\
+58 & 4\\
+\cellcolor{gray!10}{59} & \cellcolor{gray!10}{4}\\
+\addlinespace
+60 & 4\\
+\cellcolor{gray!10}{62} & \cellcolor{gray!10}{4}\\
+63 & 4\\
+\cellcolor{gray!10}{64} & \cellcolor{gray!10}{4}\\
+66 & 4\\
+\addlinespace
+\cellcolor{gray!10}{68} & \cellcolor{gray!10}{4}\\
+70 & 4\\
+\cellcolor{gray!10}{71} & \cellcolor{gray!10}{4}\\
+72 & 4\\
+\cellcolor{gray!10}{74} & \cellcolor{gray!10}{4}\\
+\addlinespace
+75 & 4\\
+\cellcolor{gray!10}{76} & \cellcolor{gray!10}{4}\\
+77 & 4\\
+\cellcolor{gray!10}{79} & \cellcolor{gray!10}{4}\\
+80 & 4\\
+\addlinespace
+\cellcolor{gray!10}{82} & \cellcolor{gray!10}{4}\\
+2 & 3\\
+\cellcolor{gray!10}{3} & \cellcolor{gray!10}{3}\\
+23 & 3\\
+\cellcolor{gray!10}{25} & \cellcolor{gray!10}{3}\\
+\addlinespace
+36 & 3\\
+\cellcolor{gray!10}{40} & \cellcolor{gray!10}{3}\\
+43 & 3\\
+\cellcolor{gray!10}{44} & \cellcolor{gray!10}{3}\\
+52 & 3\\
+\addlinespace
+\cellcolor{gray!10}{56} & \cellcolor{gray!10}{3}\\
+61 & 3\\
+\cellcolor{gray!10}{65} & \cellcolor{gray!10}{3}\\
+67 & 3\\
+\cellcolor{gray!10}{69} & \cellcolor{gray!10}{3}\\
+\addlinespace
+73 & 3\\
+\cellcolor{gray!10}{78} & \cellcolor{gray!10}{3}\\
+81 & 3\\
+\cellcolor{gray!10}{15} & \cellcolor{gray!10}{2}\\
+30 & 2\\
+\addlinespace
+\cellcolor{gray!10}{33} & \cellcolor{gray!10}{2}\\
+49 & 2\\
+\bottomrule
+\end{tabular}
 
 \subsubsection{Gehaltsunterschiede zwischen den
 Clustern}\label{gehaltsunterschiede-zwischen-den-clustern}
@@ -1921,16 +1877,15 @@ Clustern}\label{gehaltsunterschiede-zwischen-den-clustern}
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-32-1.pdf}}
-
-TODO ``Arc Diagramm'' zu den regionalen Clustern von der geografischen
-Netzwerkanalyse
-
-\subsection{Zurückbesinnen auf die geografische
-Analyse?}\label{zuruxfcckbesinnen-auf-die-geografische-analyse}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-30-1.pdf}}
 
 \section{Abschließende Betrachtung mittels interaktiver
 Visualisierung}\label{abschlieuxdfende-betrachtung-mittels-interaktiver-visualisierung}
+
+Im Folgenden wird dem Leser eine interaktive Visualisierung präsentiert,
+welche ihm die Möglichkeit bietet, die Ergebnisse der Wettbewerbsanalyse
+eigenständig zu explorieren, bevor die Schlussfolgerungen und
+Empfehlungen dargelegt werden.
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -1942,38 +1897,33 @@ Visualisierung}\label{abschlieuxdfende-betrachtung-mittels-interaktiver-visualis
 \begin{Shaded}
 \begin{Highlighting}[]
 \CommentTok{\# Prepare data for visNetwork}
-\StringTok{\textquotesingle{}nodes \textless{}{-} data.frame(id = V(g\_direct\_competitors)$name,}
-\StringTok{                    label = V(g\_direct\_competitors)$name,}
-\StringTok{                    group = membership(communities),}
-\StringTok{                    value = degree\_centrality,}
-\StringTok{                    title = paste("Degree:", degree\_centrality, }
-\StringTok{                                  "\textless{}br\textgreater{}Betweenness:", betweenness\_centrality,}
-\StringTok{                                  "\textless{}br\textgreater{}Closeness:", closeness\_centrality,}
-\StringTok{                                  "\textless{}br\textgreater{}Eigenvector:", eigenvector\_centrality))}
+\NormalTok{nodes }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}\AttributeTok{id =} \FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{name,}
+                    \AttributeTok{label =} \FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{name,}
+                    \AttributeTok{group =} \FunctionTok{membership}\NormalTok{(communities),}
+                    \AttributeTok{value =}\NormalTok{ degree\_centrality,}
+                    \AttributeTok{title =} \FunctionTok{paste}\NormalTok{(}\StringTok{"Degree:"}\NormalTok{, degree\_centrality, }
+                                  \StringTok{"\textless{}br\textgreater{}Betweenness:"}\NormalTok{, betweenness\_centrality,}
+                                  \StringTok{"\textless{}br\textgreater{}Closeness:"}\NormalTok{, closeness\_centrality,}
+                                  \StringTok{"\textless{}br\textgreater{}Eigenvector:"}\NormalTok{, eigenvector\_centrality))}
 
-\StringTok{edges \textless{}{-} data.frame(from = as.character(edges$from), to = as.character(edges$to))}
+\NormalTok{edges }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}\AttributeTok{from =} \FunctionTok{as.character}\NormalTok{(edges}\SpecialCharTok{$}\NormalTok{from), }\AttributeTok{to =} \FunctionTok{as.character}\NormalTok{(edges}\SpecialCharTok{$}\NormalTok{to))}
 
-\StringTok{\# Create interactive network visualization}
-\StringTok{visNetwork(nodes, edges) \%\textgreater{}\%}
-\StringTok{  visOptions(highlightNearest = TRUE, nodesIdSelection = TRUE) \%\textgreater{}\%}
-\StringTok{  visGroups(groupname = "1", color = "red") \%\textgreater{}\%}
-\StringTok{  visGroups(groupname = "2", color = "blue") \%\textgreater{}\%}
-\StringTok{  visGroups(groupname = "3", color = "green") \%\textgreater{}\%}
-\StringTok{  visGroups(groupname = "4", color = "yellow") \%\textgreater{}\%}
-\StringTok{  visGroups(groupname = "5", color = "purple") \%\textgreater{}\%}
-\StringTok{  visGroups(groupname = "6", color = "orange") \%\textgreater{}\%}
-\StringTok{  visGroups(groupname = "7", color = "pink") \%\textgreater{}\%}
-\StringTok{  visLayout(randomSeed = 123) \%\textgreater{}\%}
-\StringTok{  visLegend()\textquotesingle{}}
-\end{Highlighting}
-\end{Shaded}
+\CommentTok{\# Create interactive network visualization}
+\NormalTok{network }\OtherTok{\textless{}{-}} \FunctionTok{visNetwork}\NormalTok{(nodes, edges) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{visOptions}\NormalTok{(}\AttributeTok{highlightNearest =} \ConstantTok{TRUE}\NormalTok{, }\AttributeTok{nodesIdSelection =} \ConstantTok{TRUE}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{visGroups}\NormalTok{(}\AttributeTok{groupname =} \StringTok{"1"}\NormalTok{, }\AttributeTok{color =} \StringTok{"red"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{visGroups}\NormalTok{(}\AttributeTok{groupname =} \StringTok{"2"}\NormalTok{, }\AttributeTok{color =} \StringTok{"blue"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{visGroups}\NormalTok{(}\AttributeTok{groupname =} \StringTok{"3"}\NormalTok{, }\AttributeTok{color =} \StringTok{"green"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{visGroups}\NormalTok{(}\AttributeTok{groupname =} \StringTok{"4"}\NormalTok{, }\AttributeTok{color =} \StringTok{"yellow"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{visGroups}\NormalTok{(}\AttributeTok{groupname =} \StringTok{"5"}\NormalTok{, }\AttributeTok{color =} \StringTok{"purple"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{visGroups}\NormalTok{(}\AttributeTok{groupname =} \StringTok{"6"}\NormalTok{, }\AttributeTok{color =} \StringTok{"orange"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{visGroups}\NormalTok{(}\AttributeTok{groupname =} \StringTok{"7"}\NormalTok{, }\AttributeTok{color =} \StringTok{"pink"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{visLayout}\NormalTok{(}\AttributeTok{randomSeed =} \DecValTok{123}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{visLegend}\NormalTok{()}
 
-\begin{verbatim}
-## [1] "nodes <- data.frame(id = V(g_direct_competitors)$name,\n                    label = V(g_direct_competitors)$name,\n                    group = membership(communities),\n                    value = degree_centrality,\n                    title = paste(\"Degree:\", degree_centrality, \n                                  \"<br>Betweenness:\", betweenness_centrality,\n                                  \"<br>Closeness:\", closeness_centrality,\n                                  \"<br>Eigenvector:\", eigenvector_centrality))\n\nedges <- data.frame(from = as.character(edges$from), to = as.character(edges$to))\n\n# Create interactive network visualization\nvisNetwork(nodes, edges) %>%\n  visOptions(highlightNearest = TRUE, nodesIdSelection = TRUE) %>%\n  visGroups(groupname = \"1\", color = \"red\") %>%\n  visGroups(groupname = \"2\", color = \"blue\") %>%\n  visGroups(groupname = \"3\", color = \"green\") %>%\n  visGroups(groupname = \"4\", color = \"yellow\") %>%\n  visGroups(groupname = \"5\", color = \"purple\") %>%\n  visGroups(groupname = \"6\", color = \"orange\") %>%\n  visGroups(groupname = \"7\", color = \"pink\") %>%\n  visLayout(randomSeed = 123) %>%\n  visLegend()"
-\end{verbatim}
+\CommentTok{\# Speichere die interaktive Visualisierung als HTML{-}Datei}
+\FunctionTok{saveWidget}\NormalTok{(network, }\StringTok{"network.html"}\NormalTok{, }\AttributeTok{selfcontained =} \ConstantTok{TRUE}\NormalTok{)}
 
-\begin{Shaded}
-\begin{Highlighting}[]
 \CommentTok{\# Fügt ein Bild der interaktiven Netzwerkvisualisierung hinzu}
 \CommentTok{\# knitr::include\_graphics("interaktive\_Netzwerke\_Bilder/Übersicht.png")}
 
@@ -1981,8 +1931,10 @@ Visualisierung}\label{abschlieuxdfende-betrachtung-mittels-interaktiver-visualis
 \end{Highlighting}
 \end{Shaded}
 
-Zugriff auf die interaktive Visualisierung über das Repository
-(Dateiname: network.html): \url{https://github.com/Mzaex7/SNA}
+Die Ausführung des Codes resultiert in der Speicherung der interaktiven
+Visualisierung unter dem Namen ``network.html'' im Arbeitsverzeichnis.
+Diese kann aufgerufen werden, um explorativ die Ergebnisse zu
+untersuchen.
 
 \newpage
 
@@ -2002,6 +1954,202 @@ Praktische Empfehlungen: Leite Handlungsempfehlungen für
 Berufseinsteiger und Unternehmen ab: Wo und wie sollten Fachkräfte ihre
 Karrieresuche fokussieren? Welche Unternehmen sollten strategische
 Investitionen in Gehälter und Talentförderung in Erwägung ziehen?
+
+Ausblick: Weiterreichende Untersuchung des Zusammenhangs zwischen dem
+Einfluss von. Im Rahmen dieser Arbeit wurde bereits ein Schritt in diese
+Richtung getan(siehe Anhang)
+
+\newpage
+
+\section{Anhang}\label{anhang}
+
+\subsection{Geografische Betrachtung}\label{geografische-betrachtung}
+
+Da bei der Betrachtung der Wettbewerbsstruktur die geografische Nähe von
+Unternehmen auch eine Rolle spielen kann, soll zunächst ein Netzwerk
+erstellt werden, das auf der geografischen Nähe von Unternehmen basiert.
+Diese annahme beruht darauf, dass Unternehmen in derselben Region
+wahrscheinlich ähnliche Gehälter anbieten. Dies soll Überprüft werden um
+diese Arbeit um eine weiter Dimension zu erweitern.
+
+\subsubsection{Erstellung eines Geografischen
+Netzwerkes}\label{erstellung-eines-geografischen-netzwerkes}
+
+Die Gewichtung erfolgt linear, wobei jeder Standort eine Grundgröße von
+3 hat, und für jedes Unternehmen an diesem Standort wird die Größe um
+0.5 erhöht. Ab einer Größe von 4.5 wird die Farbe des Standorts
+geändert, um die Standorte mit mehreren Unternehmen hervorzuheben.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Aus Gründen der Sichtbarkeit, werden bloß Locations mit mehr als einem}
+\CommentTok{\# Unternehmen dargestellt.}
+
+\CommentTok{\# Extract relevant columns for geographic visualization}
+\NormalTok{edges\_geo }\OtherTok{\textless{}{-}}\NormalTok{ data }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{select}\NormalTok{(}\AttributeTok{Company =} \StringTok{\textasciigrave{}}\AttributeTok{Company Name}\StringTok{\textasciigrave{}}\NormalTok{, }\AttributeTok{Location =} \StringTok{\textasciigrave{}}\AttributeTok{Location}\StringTok{\textasciigrave{}}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{distinct}\NormalTok{()}
+
+\CommentTok{\# Calculate the number of companies per location and filter for locations}
+\CommentTok{\# with more than one company}
+\NormalTok{location\_counts }\OtherTok{\textless{}{-}}\NormalTok{ edges\_geo }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{group\_by}\NormalTok{(Location) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{summarise}\NormalTok{(}\AttributeTok{Company\_Count =} \FunctionTok{n}\NormalTok{()) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(Company\_Count }\SpecialCharTok{\textgreater{}} \DecValTok{1}\NormalTok{)  }\CommentTok{\# Keep only locations with more than one company}
+
+\CommentTok{\# Filter edges to include only connections for locations with more than}
+\CommentTok{\# one company}
+\NormalTok{filtered\_edges }\OtherTok{\textless{}{-}}\NormalTok{ edges\_geo }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(Location }\SpecialCharTok{\%in\%}\NormalTok{ location\_counts}\SpecialCharTok{$}\NormalTok{Location)}
+
+\CommentTok{\# Create an igraph object for geographic visualization}
+\NormalTok{network\_geo }\OtherTok{\textless{}{-}} \FunctionTok{graph\_from\_data\_frame}\NormalTok{(filtered\_edges, }\AttributeTok{directed =} \ConstantTok{FALSE}\NormalTok{)}
+
+\CommentTok{\# Set vertex colors based on whether the node is a company or a location}
+\NormalTok{company\_colors }\OtherTok{\textless{}{-}} \StringTok{"blue"}
+\NormalTok{location\_colors }\OtherTok{\textless{}{-}} \FunctionTok{rainbow}\NormalTok{(}\FunctionTok{nrow}\NormalTok{(location\_counts))}
+
+\CommentTok{\# Set vertex size based on the number of companies at each location}
+\NormalTok{vertex\_sizes }\OtherTok{\textless{}{-}} \FunctionTok{ifelse}\NormalTok{(}\FunctionTok{V}\NormalTok{(network\_geo)}\SpecialCharTok{$}\NormalTok{name }\SpecialCharTok{\%in\%}\NormalTok{ location\_counts}\SpecialCharTok{$}\NormalTok{Location,}
+                       \DecValTok{3} \SpecialCharTok{+}\NormalTok{ location\_counts}\SpecialCharTok{$}\NormalTok{Company\_Count[}
+                         \FunctionTok{match}\NormalTok{(}\FunctionTok{V}\NormalTok{(network\_geo)}\SpecialCharTok{$}\NormalTok{name, location\_counts}\SpecialCharTok{$}\NormalTok{Location)}
+\NormalTok{                       ] }\SpecialCharTok{*} \FloatTok{0.5}\NormalTok{,  }\CommentTok{\# Linear scaling factor with minimum size 3}
+                       \DecValTok{3}\NormalTok{) }\CommentTok{\# Default size for companies}
+
+\CommentTok{\# Assign colors and sizes to vertices}
+\FunctionTok{V}\NormalTok{(network\_geo)}\SpecialCharTok{$}\NormalTok{size }\OtherTok{\textless{}{-}}\NormalTok{ vertex\_sizes}
+\FunctionTok{V}\NormalTok{(network\_geo)}\SpecialCharTok{$}\NormalTok{color }\OtherTok{\textless{}{-}} \FunctionTok{ifelse}\NormalTok{(}\FunctionTok{V}\NormalTok{(network\_geo)}\SpecialCharTok{$}\NormalTok{name }\SpecialCharTok{\%in\%}\NormalTok{ location\_counts}\SpecialCharTok{$}\NormalTok{Location }\SpecialCharTok{\&}
+\NormalTok{                               vertex\_sizes }\SpecialCharTok{\textgreater{}} \FloatTok{4.5}\NormalTok{,}
+\NormalTok{                               location\_colors[}\FunctionTok{match}\NormalTok{(}\FunctionTok{V}\NormalTok{(network\_geo)}\SpecialCharTok{$}\NormalTok{name, location\_counts}\SpecialCharTok{$}\NormalTok{Location)],}
+                               \StringTok{"grey"}\NormalTok{)}
+
+\CommentTok{\# Plot the network}
+\FunctionTok{plot}\NormalTok{(network\_geo,}
+     \AttributeTok{vertex.label =} \ConstantTok{NA}\NormalTok{,  }\CommentTok{\# Remove labels from the plot}
+     \AttributeTok{vertex.size =} \FunctionTok{V}\NormalTok{(network\_geo)}\SpecialCharTok{$}\NormalTok{size,}
+     \AttributeTok{vertex.color =} \FunctionTok{V}\NormalTok{(network\_geo)}\SpecialCharTok{$}\NormalTok{color,}
+     \AttributeTok{edge.arrow.size =} \FloatTok{0.3}\NormalTok{,}
+     \AttributeTok{layout =}\NormalTok{ layout\_with\_fr,}
+\NormalTok{)}
+
+\CommentTok{\# Add legend for locations with size \textgreater{} 4.5}
+\NormalTok{location\_indices }\OtherTok{\textless{}{-}} \FunctionTok{match}\NormalTok{(location\_counts}\SpecialCharTok{$}\NormalTok{Location, }\FunctionTok{V}\NormalTok{(network\_geo)}\SpecialCharTok{$}\NormalTok{name)}
+\NormalTok{large\_locations }\OtherTok{\textless{}{-}}\NormalTok{ location\_counts}\SpecialCharTok{$}\NormalTok{Location[vertex\_sizes[location\_indices] }\SpecialCharTok{\textgreater{}} \FloatTok{4.5}\NormalTok{]}
+
+\NormalTok{large\_location\_colors }\OtherTok{\textless{}{-}}\NormalTok{ location\_colors[}
+  \FunctionTok{match}\NormalTok{(large\_locations, location\_counts}\SpecialCharTok{$}\NormalTok{Location)}
+\NormalTok{]}
+\FunctionTok{legend}\NormalTok{(}\StringTok{"topright"}\NormalTok{,}
+       \AttributeTok{legend =}\NormalTok{ large\_locations,}
+       \AttributeTok{col =}\NormalTok{ large\_location\_colors,}
+       \AttributeTok{pch =} \DecValTok{19}\NormalTok{,}
+       \AttributeTok{title =} \StringTok{"Locations"}\NormalTok{)}
+
+\FunctionTok{title}\NormalTok{(}\AttributeTok{main =} \StringTok{"Geografisches Netzwerk basierend auf Unternehmensstandorten"}\NormalTok{, }\AttributeTok{cex.main =} \DecValTok{2}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-33-1.pdf}}
+
+Wie zu erwarten war, sind die meisten Unternehmen in Ballungszentren wie
+New York, Chicago und San Francisco angesiedelt.
+
+\subsubsection{Vergleich der Gehälter zwischen den Hotspot- und den
+anderen
+Regionen}\label{vergleich-der-gehuxe4lter-zwischen-den-hotspot--und-den-anderen-regionen}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Ausgabe der farbigen Standorte}
+\FunctionTok{print}\NormalTok{(large\_locations)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "Chicago, IL"       "New York, NY"      "San Francisco, CA"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Filterung der Daten für die Hotspot{-}Regionen}
+\NormalTok{data\_hotspots }\OtherTok{\textless{}{-}}\NormalTok{ data }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(}\StringTok{\textasciigrave{}}\AttributeTok{Location}\StringTok{\textasciigrave{}} \SpecialCharTok{\%in\%}\NormalTok{ large\_locations)}
+
+\CommentTok{\# Filterung der Daten für die anderen Regionen}
+\NormalTok{data\_other }\OtherTok{\textless{}{-}}\NormalTok{ data }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(}\SpecialCharTok{!}\StringTok{\textasciigrave{}}\AttributeTok{Location}\StringTok{\textasciigrave{}} \SpecialCharTok{\%in\%}\NormalTok{ large\_locations)}
+
+\CommentTok{\# Durchschnittsgehalt in den Hotspot{-}Regionen}
+\NormalTok{avg\_salary\_hotspots }\OtherTok{\textless{}{-}} \FunctionTok{mean}\NormalTok{(data\_hotspots}\SpecialCharTok{$}\StringTok{\textasciigrave{}}\AttributeTok{Salary Estimate}\StringTok{\textasciigrave{}}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)}
+
+\CommentTok{\# Durchschnittsgehalt in den anderen Regionen}
+\NormalTok{avg\_salary\_other }\OtherTok{\textless{}{-}} \FunctionTok{mean}\NormalTok{(data\_other}\SpecialCharTok{$}\StringTok{\textasciigrave{}}\AttributeTok{Salary Estimate}\StringTok{\textasciigrave{}}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)}
+
+\CommentTok{\# Erstellung eines Balkendiagramms}
+\FunctionTok{ggplot}\NormalTok{(}\AttributeTok{data =} \FunctionTok{data.frame}\NormalTok{(}\AttributeTok{Region =} \FunctionTok{c}\NormalTok{(}\StringTok{"Hotspot"}\NormalTok{, }\StringTok{"Other"}\NormalTok{),}
+                         \AttributeTok{Average\_Salary =} \FunctionTok{c}\NormalTok{(avg\_salary\_hotspots,}
+\NormalTok{                                            avg\_salary\_other)),}
+       \FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Region, }\AttributeTok{y =}\NormalTok{ Average\_Salary, }\AttributeTok{fill =}\NormalTok{ Region)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_bar}\NormalTok{(}\AttributeTok{stat =} \StringTok{"identity"}\NormalTok{, }\AttributeTok{width =} \FloatTok{0.4}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{scale\_fill\_manual}\NormalTok{(}\AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"Hotspot"} \OtherTok{=} \StringTok{"\#FF5733"}\NormalTok{, }\StringTok{"Other"} \OtherTok{=} \StringTok{"\#33C3FF"}\NormalTok{)) }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Average Salary in Hotspot vs. Other Regions"}\NormalTok{,}
+       \AttributeTok{x =} \StringTok{"Region"}\NormalTok{,}
+       \AttributeTok{y =} \StringTok{"Average Salary"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{theme\_minimal}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{theme}\NormalTok{(}
+    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{hjust =} \FloatTok{0.5}\NormalTok{, }\AttributeTok{size =} \DecValTok{14}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
+    \AttributeTok{axis.title.x =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{12}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
+    \AttributeTok{axis.title.y =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{12}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
+    \AttributeTok{axis.text.x =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{12}\NormalTok{),}
+    \AttributeTok{axis.text.y =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{12}\NormalTok{),}
+    \AttributeTok{legend.position =} \StringTok{"none"}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{geom\_text}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{label =} \FunctionTok{round}\NormalTok{(Average\_Salary, }\DecValTok{2}\NormalTok{)), }\AttributeTok{vjust =} \SpecialCharTok{{-}}\FloatTok{0.5}\NormalTok{, }\AttributeTok{size =} \DecValTok{4}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-34-1.pdf}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Berechnung der Gehaltsunterschiede}
+\NormalTok{salary\_diff }\OtherTok{\textless{}{-}}\NormalTok{ avg\_salary\_hotspots }\SpecialCharTok{{-}}\NormalTok{ avg\_salary\_other}
+
+\CommentTok{\# Ausgabe der Gehaltsunterschiede}
+\FunctionTok{print}\NormalTok{(}\FunctionTok{paste}\NormalTok{(}\StringTok{"Durchschnittsgehalt in Hotspot{-}Regionen:"}\NormalTok{, avg\_salary\_hotspots))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "Durchschnittsgehalt in Hotspot-Regionen: 117.223880597015"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{print}\NormalTok{(}\FunctionTok{paste}\NormalTok{(}\StringTok{"Durchschnittsgehalt in anderen Regionen:"}\NormalTok{, avg\_salary\_other))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "Durchschnittsgehalt in anderen Regionen: 103.59"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{print}\NormalTok{(}\FunctionTok{paste}\NormalTok{(}\StringTok{"Durchschnittlicher Gehaltsunterschied:"}\NormalTok{, salary\_diff))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "Durchschnittlicher Gehaltsunterschied: 13.6338805970149"
+\end{verbatim}
+
+Das Ergebniss zeigt, dass entsprechend der vorher getroffenen Annahme,
+die Gehälter in den Hotspot-Regionen im Durchschnitt höher sind als in
+anderen Regionen. Dies impliziert eine Korrelation zwischen
+geografischer Nähe und Gehaltsniveau. Eine mögliche Erlärung hierfür
+könnte die höhere Lebenshaltungskosten in Ballungszentren sein, die
+höhere Gehälter erforderlich machen.
 
 \newpage
 
