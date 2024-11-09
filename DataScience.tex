@@ -77,6 +77,16 @@
 \newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
 \newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
 \newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{longtable,booktabs,array}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
 \usepackage{graphicx}
 \makeatletter
 \newsavebox\pandoc@box
@@ -167,6 +177,8 @@ Zunächst müssen die benötigten Bibliotheken installiert werden:
   \$ install.packages(``ggplot2'')
 \item
   \$ install.packages(``RColorBrewer'')
+\item
+  \$ install.packages(``skimr'')
 \end{itemize}
 
 Und anschließend geladen werden:
@@ -183,6 +195,7 @@ Und anschließend geladen werden:
 \FunctionTok{library}\NormalTok{(webshot)}
 \FunctionTok{library}\NormalTok{(ggplot2)}
 \FunctionTok{library}\NormalTok{(RColorBrewer)}
+\FunctionTok{library}\NormalTok{(skimr)}
 \end{Highlighting}
 \end{Shaded}
 
@@ -256,20 +269,9 @@ orientiert.
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\NormalTok{data }\OtherTok{\textless{}{-}} \FunctionTok{read\_csv}\NormalTok{(}\StringTok{"data/Glassdoor\_DataScience\_Salary.csv"}\NormalTok{)}
+\NormalTok{data }\OtherTok{\textless{}{-}} \FunctionTok{read\_csv}\NormalTok{(}\StringTok{"data/Glassdoor\_DataScience\_Salary.csv"}\NormalTok{, }\AttributeTok{show\_col\_types =} \ConstantTok{FALSE}\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
-
-\begin{verbatim}
-## Rows: 742 Columns: 28
-## -- Column specification --------------------------------------------------------
-## Delimiter: ","
-## chr (14): Job Title, Job Description, Company Name, Location, Headquarters, ...
-## dbl (14): Salary Estimate, Rating, Founded, Min_Salary, Max_Salary, Same Sta...
-## 
-## i Use `spec()` to retrieve the full column specification for this data.
-## i Specify the column types or set `show_col_types = FALSE` to quiet this message.
-\end{verbatim}
 
 Die vorliegende Arbeit basiert auf einem Datensatz von Kaggle, der
 Informationen über Data Science Jobs in verschiedenen Unternehmen für
@@ -359,61 +361,140 @@ Der Datensatz umfasst konkret die folgenden Spalten:
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\FunctionTok{summary}\NormalTok{(data)}
+\CommentTok{\# Erstellen eine schönen Zusammenfassung des Datensatzes}
+\FunctionTok{skim}\NormalTok{(data)}
 \end{Highlighting}
 \end{Shaded}
 
-\begin{verbatim}
-##   Job Title         Salary Estimate Job Description        Rating      
-##  Length:742         Min.   : 13.5   Length:742         Min.   :-1.000  
-##  Class :character   1st Qu.: 73.5   Class :character   1st Qu.: 3.300  
-##  Mode  :character   Median : 97.5   Mode  :character   Median : 3.700  
-##                     Mean   :100.6                      Mean   : 3.619  
-##                     3rd Qu.:122.5                      3rd Qu.: 4.000  
-##                     Max.   :254.0                      Max.   : 5.000  
-##  Company Name         Location         Headquarters           Size          
-##  Length:742         Length:742         Length:742         Length:742        
-##  Class :character   Class :character   Class :character   Class :character  
-##  Mode  :character   Mode  :character   Mode  :character   Mode  :character  
-##                                                                             
-##                                                                             
-##                                                                             
-##     Founded     Type of ownership    Industry            Sector         
-##  Min.   :  -1   Length:742         Length:742         Length:742        
-##  1st Qu.:1939   Class :character   Class :character   Class :character  
-##  Median :1988   Mode  :character   Mode  :character   Mode  :character  
-##  Mean   :1837                                                           
-##  3rd Qu.:2007                                                           
-##  Max.   :2019                                                           
-##    Revenue          Competitors          Min_Salary       Max_Salary   
-##  Length:742         Length:742         Min.   : 15.00   Min.   : 16.0  
-##  Class :character   Class :character   1st Qu.: 52.00   1st Qu.: 96.0  
-##  Mode  :character   Mode  :character   Median : 69.50   Median :124.0  
-##                                        Mean   : 74.72   Mean   :127.2  
-##                                        3rd Qu.: 91.00   3rd Qu.:155.0  
-##                                        Max.   :202.00   Max.   :306.0  
-##     State             Same State         Age           Python_yn     
-##  Length:742         Min.   :0.000   Min.   : -1.00   Min.   :0.0000  
-##  Class :character   1st Qu.:0.000   1st Qu.: 14.00   1st Qu.:0.0000  
-##  Mode  :character   Median :1.000   Median : 27.00   Median :1.0000  
-##                     Mean   :0.558   Mean   : 49.39   Mean   :0.5283  
-##                     3rd Qu.:1.000   3rd Qu.: 62.00   3rd Qu.:1.0000  
-##                     Max.   :1.000   Max.   :279.00   Max.   :1.0000  
-##     R Studio            Spark            AWS_yn          Excel_yn     
-##  Min.   :0.000000   Min.   :0.0000   Min.   :0.0000   Min.   :0.0000  
-##  1st Qu.:0.000000   1st Qu.:0.0000   1st Qu.:0.0000   1st Qu.:0.0000  
-##  Median :0.000000   Median :0.0000   Median :0.0000   Median :1.0000  
-##  Mean   :0.002695   Mean   :0.2251   Mean   :0.2372   Mean   :0.5229  
-##  3rd Qu.:0.000000   3rd Qu.:0.0000   3rd Qu.:0.0000   3rd Qu.:1.0000  
-##  Max.   :1.000000   Max.   :1.0000   Max.   :1.0000   Max.   :1.0000  
-##    Job_simp          job_state            desc_len        Num_comp    
-##  Length:742         Length:742         Min.   :  407   Min.   :0.000  
-##  Class :character   Class :character   1st Qu.: 2801   1st Qu.:0.000  
-##  Mode  :character   Mode  :character   Median : 3731   Median :0.000  
-##                                        Mean   : 3870   Mean   :1.054  
-##                                        3rd Qu.: 4740   3rd Qu.:3.000  
-##                                        Max.   :10051   Max.   :4.000
-\end{verbatim}
+\begin{longtable}[]{@{}ll@{}}
+\caption{Data summary}\tabularnewline
+\toprule\noalign{}
+\endfirsthead
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Name & data \\
+Number of rows & 742 \\
+Number of columns & 28 \\
+\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_ & \\
+Column type frequency: & \\
+character & 14 \\
+numeric & 14 \\
+\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_ & \\
+Group variables & None \\
+\end{longtable}
+
+\textbf{Variable type: character}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.2308}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1282}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1795}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.0513}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.0769}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.0769}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1154}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 14\tabcolsep) * \real{0.1410}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+skim\_variable
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+n\_missing
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+complete\_rate
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+min
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+max
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+empty
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+n\_unique
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+whitespace
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Job Title & 0 & 1 & 9 & 98 & 0 & 264 & 0 \\
+Job Description & 0 & 1 & 407 & 10051 & 0 & 463 & 0 \\
+Company Name & 0 & 1 & 2 & 51 & 0 & 343 & 0 \\
+Location & 0 & 1 & 8 & 33 & 0 & 200 & 0 \\
+Headquarters & 0 & 1 & 2 & 26 & 0 & 198 & 0 \\
+Size & 0 & 1 & 2 & 23 & 0 & 9 & 0 \\
+Type of ownership & 0 & 1 & 2 & 30 & 0 & 11 & 0 \\
+Industry & 0 & 1 & 2 & 40 & 0 & 60 & 0 \\
+Sector & 0 & 1 & 2 & 34 & 0 & 25 & 0 \\
+Revenue & 0 & 1 & 2 & 32 & 0 & 14 & 0 \\
+Competitors & 0 & 1 & 2 & 92 & 0 & 128 & 0 \\
+State & 0 & 1 & 2 & 11 & 0 & 38 & 0 \\
+Job\_simp & 0 & 1 & 2 & 14 & 0 & 7 & 0 \\
+job\_state & 0 & 1 & 2 & 2 & 0 & 37 & 0 \\
+\end{longtable}
+
+\textbf{Variable type: numeric}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 20\tabcolsep) * \real{0.1684}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 20\tabcolsep) * \real{0.1053}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 20\tabcolsep) * \real{0.1474}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 20\tabcolsep) * \real{0.0842}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 20\tabcolsep) * \real{0.0842}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 20\tabcolsep) * \real{0.0632}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 20\tabcolsep) * \real{0.0737}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 20\tabcolsep) * \real{0.0737}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 20\tabcolsep) * \real{0.0737}}
+  >{\raggedleft\arraybackslash}p{(\linewidth - 20\tabcolsep) * \real{0.0632}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 20\tabcolsep) * \real{0.0632}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+skim\_variable
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+n\_missing
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+complete\_rate
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+mean
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+sd
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+p0
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+p25
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+p50
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+p75
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+p100
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+hist
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Salary Estimate & 0 & 1 & 100.63 & 38.86 & 13.5 & 73.5 & 97.5 & 122.5 &
+254 & ▂▇▅▁▁ \\
+Rating & 0 & 1 & 3.62 & 0.80 & -1.0 & 3.3 & 3.7 & 4.0 & 5 & ▁▁▁▇▅ \\
+Founded & 0 & 1 & 1837.15 & 497.18 & -1.0 & 1939.0 & 1988.0 & 2007.0 &
+2019 & ▁▁▁▁▇ \\
+Min\_Salary & 0 & 1 & 74.72 & 30.98 & 15.0 & 52.0 & 69.5 & 91.0 & 202 &
+▅▇▃▁▁ \\
+Max\_Salary & 0 & 1 & 127.18 & 46.91 & 16.0 & 96.0 & 124.0 & 155.0 & 306
+& ▂▇▆▂▁ \\
+Same State & 0 & 1 & 0.56 & 0.50 & 0.0 & 0.0 & 1.0 & 1.0 & 1 & ▆▁▁▁▇ \\
+Age & 0 & 1 & 49.39 & 53.96 & -1.0 & 14.0 & 27.0 & 62.0 & 279 & ▇▂▁▁▁ \\
+Python\_yn & 0 & 1 & 0.53 & 0.50 & 0.0 & 0.0 & 1.0 & 1.0 & 1 & ▇▁▁▁▇ \\
+R Studio & 0 & 1 & 0.00 & 0.05 & 0.0 & 0.0 & 0.0 & 0.0 & 1 & ▇▁▁▁▁ \\
+Spark & 0 & 1 & 0.23 & 0.42 & 0.0 & 0.0 & 0.0 & 0.0 & 1 & ▇▁▁▁▂ \\
+AWS\_yn & 0 & 1 & 0.24 & 0.43 & 0.0 & 0.0 & 0.0 & 0.0 & 1 & ▇▁▁▁▂ \\
+Excel\_yn & 0 & 1 & 0.52 & 0.50 & 0.0 & 0.0 & 1.0 & 1.0 & 1 & ▇▁▁▁▇ \\
+desc\_len & 0 & 1 & 3869.55 & 1521.50 & 407.0 & 2801.0 & 3731.0 & 4740.0
+& 10051 & ▂▇▅▁▁ \\
+Num\_comp & 0 & 1 & 1.05 & 1.38 & 0.0 & 0.0 & 0.0 & 3.0 & 4 & ▇▁▁▃▁ \\
+\end{longtable}
 
 Im Folgenden wird eine Übersicht der wesentlichen Spalten präsentiert:
 
@@ -467,10 +548,7 @@ Python, R Studio, Spark und ähnlichen Programmen, welche ursprünglich
 aus der Jobbeschreibung extrahiert wurden, entfernt.
 
 Nachdem die Daten in Python mit Hilfe von Pandas bereinigt, ergänzt und
-bearbeitet wurden, können sie nun in R eingelesen werden. Dabei wurde
-sich an
-\url{https://www.kaggle.com/code/maxzeitler/data-science-job-salary-prediction-glassdoor/edit}
-orientiert.
+bearbeitet wurden, können sie nun in R eingelesen werden.
 
 Im Folgenden wird eine erste Betrachtung der Daten vorgenommen. Zu
 diesem Zweck werden die Jobs in New York nach ihren jeweiligen
@@ -718,18 +796,9 @@ Werte}\label{uxfcberpruxfcfung-auf-weitere-fehlende-werte}
 \begin{Shaded}
 \begin{Highlighting}[]
 \CommentTok{\# Überprüfen auf NA{-}Werte}
-
 \NormalTok{na\_counts }\OtherTok{\textless{}{-}} \FunctionTok{colSums}\NormalTok{(}\FunctionTok{is.na}\NormalTok{(data))}
-\FunctionTok{print}\NormalTok{(}\StringTok{"Anzahl der NA{-}Werte pro Spalte:"}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
 
-\begin{verbatim}
-## [1] "Anzahl der NA-Werte pro Spalte:"
-\end{verbatim}
-
-\begin{Shaded}
-\begin{Highlighting}[]
+\CommentTok{\# Anzahl der NA{-}Werte pro Spalte:}
 \FunctionTok{print}\NormalTok{(na\_counts)}
 \end{Highlighting}
 \end{Shaded}
@@ -753,18 +822,37 @@ Werte}\label{uxfcberpruxfcfung-auf-weitere-fehlende-werte}
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\CommentTok{\# Überprüfen auf {-}1{-}Werte}
-\NormalTok{neg\_one\_counts }\OtherTok{\textless{}{-}} \FunctionTok{sapply}\NormalTok{(data, }\ControlFlowTok{function}\NormalTok{(x) }\FunctionTok{sum}\NormalTok{(x }\SpecialCharTok{==} \SpecialCharTok{{-}}\DecValTok{1}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{))}
-\FunctionTok{print}\NormalTok{(}\StringTok{"Anzahl der {-}1{-}Werte pro Spalte:"}\NormalTok{)}
+\CommentTok{\# Überprüfen auf "na"{-}Werte (kleingeschrieben)}
+\NormalTok{na\_string\_counts }\OtherTok{\textless{}{-}} \FunctionTok{sapply}\NormalTok{(data, }\ControlFlowTok{function}\NormalTok{(x) }\FunctionTok{sum}\NormalTok{(}\FunctionTok{tolower}\NormalTok{(x) }\SpecialCharTok{==} \StringTok{"na"}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{))}
+
+\CommentTok{\# Anzahl der "na"{-}Werte pro Spalte:}
+\FunctionTok{print}\NormalTok{(na\_string\_counts)}
 \end{Highlighting}
 \end{Shaded}
 
 \begin{verbatim}
-## [1] "Anzahl der -1-Werte pro Spalte:"
+##         Job Title   Salary Estimate   Job Description            Rating 
+##                 0                 0                 0                 0 
+##      Company Name          Location      Headquarters              Size 
+##                 0                 0                 0                 0 
+##           Founded Type of ownership          Industry            Sector 
+##                 0                 0                 0                 0 
+##           Revenue       Competitors        Min_Salary        Max_Salary 
+##                 0                 0                 0                 0 
+##             State        Same State               Age         Python_yn 
+##                 0                 0                 0                 0 
+##          R Studio             Spark            AWS_yn          Excel_yn 
+##                 0                 0                 0                 0 
+##          Job_simp         job_state          desc_len          Num_comp 
+##               184                 0                 0                 0
 \end{verbatim}
 
 \begin{Shaded}
 \begin{Highlighting}[]
+\CommentTok{\# Überprüfen auf {-}1{-}Werte}
+\NormalTok{neg\_one\_counts }\OtherTok{\textless{}{-}} \FunctionTok{sapply}\NormalTok{(data, }\ControlFlowTok{function}\NormalTok{(x) }\FunctionTok{sum}\NormalTok{(x }\SpecialCharTok{==} \SpecialCharTok{{-}}\DecValTok{1}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{))}
+
+\CommentTok{\# Anzahl der {-}1 Werte in der Spalte Competitors}
 \FunctionTok{print}\NormalTok{(neg\_one\_counts)}
 \end{Highlighting}
 \end{Shaded}
@@ -786,27 +874,19 @@ Werte}\label{uxfcberpruxfcfung-auf-weitere-fehlende-werte}
 ##                 0                 0                 0                 0
 \end{verbatim}
 
-Es zeigt sich, dass es keine NA-Werte gibt, jedoch einige -1-Werte, die
-entfert werden sollten.
+Es zeigt sich, dass es nur in der Spalte ``Competitors'' relevante -1
+Werte gibt. Diese müssen nun entfernt werden. Nicht störend für diese
+Analyse sind die ``na''-Werte in der Spalte ``Job\_simp''.
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\CommentTok{\# Entfernen von Zeilen mit {-}1 Werten}
+\CommentTok{\# Entfernen von Zeilen mit {-}1 Werten in der Spalte "Competitors"}
 \NormalTok{data }\OtherTok{\textless{}{-}}\NormalTok{ data }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{filter\_all}\NormalTok{(}\FunctionTok{all\_vars}\NormalTok{(. }\SpecialCharTok{!=} \SpecialCharTok{{-}}\DecValTok{1}\NormalTok{))}
+  \FunctionTok{filter}\NormalTok{(Competitors }\SpecialCharTok{!=} \SpecialCharTok{{-}}\DecValTok{1}\NormalTok{)}
 
 \CommentTok{\# Überprüfen auf {-}1{-}Werte nach Entfernung}
 \NormalTok{neg\_one\_counts }\OtherTok{\textless{}{-}} \FunctionTok{sapply}\NormalTok{(data, }\ControlFlowTok{function}\NormalTok{(x) }\FunctionTok{sum}\NormalTok{(x }\SpecialCharTok{==} \SpecialCharTok{{-}}\DecValTok{1}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{))}
-\FunctionTok{print}\NormalTok{(}\StringTok{"Anzahl der {-}1 Werte pro Spalte:"}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{verbatim}
-## [1] "Anzahl der -1 Werte pro Spalte:"
-\end{verbatim}
-
-\begin{Shaded}
-\begin{Highlighting}[]
+\CommentTok{\# Anzahl der {-}1 Werte pro Spalte:}
 \FunctionTok{print}\NormalTok{(neg\_one\_counts)}
 \end{Highlighting}
 \end{Shaded}
@@ -817,11 +897,11 @@ entfert werden sollten.
 ##      Company Name          Location      Headquarters              Size 
 ##                 0                 0                 0                 0 
 ##           Founded Type of ownership          Industry            Sector 
-##                 0                 0                 0                 0 
+##                 1                 0                 0                 0 
 ##           Revenue       Competitors        Min_Salary        Max_Salary 
 ##                 0                 0                 0                 0 
 ##             State        Same State               Age         Python_yn 
-##                 0                 0                 0                 0 
+##                 0                 0                 1                 0 
 ##          R Studio             Spark            AWS_yn          Excel_yn 
 ##                 0                 0                 0                 0 
 ##          Job_simp         job_state          desc_len          Num_comp 
@@ -857,13 +937,106 @@ entfernt.
 ## [13] "job_state"       "desc_len"        "Num_comp"
 \end{verbatim}
 
-Nachdem die Bereinigung des Datensatzes abgeschlossen ist, kann mit der
-Analyse begonnen werden.
+\subsubsection{Bereinigung der irrelevanten
+Spalten}\label{bereinigung-der-irrelevanten-spalten}
 
-\subsection{Netzwerkbildung und
-Visualisierung}\label{netzwerkbildung-und-visualisierung}
+Im Rahmen dieser Arbeit erfolgt eine Analyse von Gehältern und
+Wettbewerbsbeziehungen für den Data-Science-Jobmarkt. Dabei ist zu
+überprüfen, ob alle Spalten tatsächlich konkrete Data-Science-Jobs
+repräsentieren.
 
-\subsubsection{Geografische
+Bei einer ersten Betrachtung des in der Einleitung präsentierten
+Balkendiagramms wird ersichtlich, dass eine Reihe von Jobtiteln nicht
+unmittelbar mit dem Bereich der ``Data Science'' assoziiert werden
+können.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# ausgeben alles uniqeuen Job Title und Job\_simp}
+\FunctionTok{print}\NormalTok{(data }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{select}\NormalTok{(}\StringTok{\textasciigrave{}}\AttributeTok{Job Title}\StringTok{\textasciigrave{}}\NormalTok{, }\StringTok{\textasciigrave{}}\AttributeTok{Job\_simp}\StringTok{\textasciigrave{}}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{unique}\NormalTok{())}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## # A tibble: 111 x 2
+##    `Job Title`                                                     Job_simp     
+##    <chr>                                                           <chr>        
+##  1 Data Scientist                                                  data scienti~
+##  2 Staff Data Scientist - Technology                               data scienti~
+##  3 Scientist I/II, Biology                                         na           
+##  4 Data Analyst                                                    analyst      
+##  5 Scientist                                                       na           
+##  6 Senior Data Scientist                                           data scienti~
+##  7 Lead Data Scientist                                             data scienti~
+##  8 Spectral Scientist/Engineer                                     na           
+##  9 College Hire - Data Scientist - Open to December 2019 Graduates data scienti~
+## 10 Data Scientist, Office of Data Science                          data scienti~
+## # i 101 more rows
+\end{verbatim}
+
+Es lässt sich feststellen, dass der Datensatz auch eine Reihe von Jobs
+von Wissenschaftlern umfasst, die nicht unmittelbar mit Data Science
+assoziiert werden. Diese Jobs sind zudem nicht mit einem vereinfachten
+Jobtitel (``Job\_simp'') versehen, der auf eine Tätigkeit im Bereich
+Data Science hinweist. Daher ist es erforderlich, alle Datensätze mit
+na-Werten in der Spalte ``Job\_simp'' zu eliminieren. Diese besutzen
+auch eine andere Schreibweise, deswegen wurden sie nicht direkt
+entfernt.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Entfernen von Zeilen mit NA{-}Werten in der Spalte "Job\_simp"}
+\NormalTok{data }\OtherTok{\textless{}{-}}\NormalTok{ data }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(Job\_simp }\SpecialCharTok{!=} \StringTok{"na"}\NormalTok{)}
+
+\CommentTok{\# Überprüfen auf "na"{-}Werte in der Spalte "Job\_simp"}
+\NormalTok{na\_job\_simp }\OtherTok{\textless{}{-}} \FunctionTok{sum}\NormalTok{(data}\SpecialCharTok{$}\NormalTok{Job\_simp }\SpecialCharTok{==} \StringTok{"na"}\NormalTok{)}
+
+\FunctionTok{print}\NormalTok{(}\FunctionTok{paste}\NormalTok{(}\StringTok{"Anzahl der \textquotesingle{}na\textquotesingle{}{-}Werte in der Spalte \textquotesingle{}Job\_simp\textquotesingle{}:"}\NormalTok{, na\_job\_simp))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "Anzahl der 'na'-Werte in der Spalte 'Job_simp': 0"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{print}\NormalTok{(}\StringTok{"Alle verbleibenden Jobtitel:"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "Alle verbleibenden Jobtitel:"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{print}\NormalTok{(data }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{select}\NormalTok{(}\StringTok{\textasciigrave{}}\AttributeTok{Job Title}\StringTok{\textasciigrave{}}\NormalTok{, Job\_simp) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{unique}\NormalTok{())}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## # A tibble: 73 x 2
+##    `Job Title`                                                     Job_simp     
+##    <chr>                                                           <chr>        
+##  1 Data Scientist                                                  data scienti~
+##  2 Staff Data Scientist - Technology                               data scienti~
+##  3 Data Analyst                                                    analyst      
+##  4 Senior Data Scientist                                           data scienti~
+##  5 Lead Data Scientist                                             data scienti~
+##  6 College Hire - Data Scientist - Open to December 2019 Graduates data scienti~
+##  7 Data Scientist, Office of Data Science                          data scienti~
+##  8 Data Scientist in Artificial Intelligence Early Career          data scienti~
+##  9 Data Scientist - Research                                       data scienti~
+## 10 Data Scientist SR                                               data scienti~
+## # i 63 more rows
+\end{verbatim}
+
+Nachdem die Bereinigung des Datensatzes nun abgeschlossen ist, kann mit
+der Analyse begonnen werden.
+
+\subsection{Geografische
 Vorbetrachtung}\label{geografische-vorbetrachtung}
 
 Da bei der Betrachtung der Wettbewerbsstruktur die geografische Nähe von
@@ -873,7 +1046,7 @@ Diese annahme beruht darauf, dass Unternehmen in derselben Region
 wahrscheinlich ähnliche Gehälter anbieten. Dies soll Überprüft werden um
 diese Arbeit um eine weiter Dimension zu erweitern.
 
-\paragraph{Erstellung eines Geografischen
+\subsubsection{Erstellung eines Geografischen
 Netzwerkes}\label{erstellung-eines-geografischen-netzwerkes}
 
 Die Gewichtung erfolgt linear, wobei jeder Standort eine Grundgröße von
@@ -948,12 +1121,13 @@ geändert, um die Standorte mit mehreren Unternehmen hervorzuheben.
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-13-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-16-1.pdf}}
 
 Wie zu erwarten war, sind die meisten Unternehmen Ballungszentren wie
 New York, Chicago und San Francisco angesiedelt.
 
-\paragraph{Vergleich der Gehälter zwischen den Hotspot- und den anderen
+\subsubsection{Vergleich der Gehälter zwischen den Hotspot- und den
+anderen
 Regionen}\label{vergleich-der-gehuxe4lter-zwischen-den-hotspot--und-den-anderen-regionen}
 
 \begin{Shaded}
@@ -964,8 +1138,7 @@ Regionen}\label{vergleich-der-gehuxe4lter-zwischen-den-hotspot--und-den-anderen-
 \end{Shaded}
 
 \begin{verbatim}
-## [1] "Boston, MA"        "Cambridge, MA"     "Chicago, IL"      
-## [4] "New York, NY"      "San Francisco, CA" "San Jose, CA"
+## [1] "Chicago, IL"       "New York, NY"      "San Francisco, CA"
 \end{verbatim}
 
 \begin{Shaded}
@@ -1007,7 +1180,7 @@ Regionen}\label{vergleich-der-gehuxe4lter-zwischen-den-hotspot--und-den-anderen-
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-14-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-17-1.pdf}}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -1020,7 +1193,7 @@ Regionen}\label{vergleich-der-gehuxe4lter-zwischen-den-hotspot--und-den-anderen-
 \end{Shaded}
 
 \begin{verbatim}
-## [1] "Durchschnittsgehalt in Hotspot-Regionen: 118.475247524752"
+## [1] "Durchschnittsgehalt in Hotspot-Regionen: 117.223880597015"
 \end{verbatim}
 
 \begin{Shaded}
@@ -1030,7 +1203,7 @@ Regionen}\label{vergleich-der-gehuxe4lter-zwischen-den-hotspot--und-den-anderen-
 \end{Shaded}
 
 \begin{verbatim}
-## [1] "Durchschnittsgehalt in anderen Regionen: 98.1"
+## [1] "Durchschnittsgehalt in anderen Regionen: 103.59"
 \end{verbatim}
 
 \begin{Shaded}
@@ -1040,7 +1213,7 @@ Regionen}\label{vergleich-der-gehuxe4lter-zwischen-den-hotspot--und-den-anderen-
 \end{Shaded}
 
 \begin{verbatim}
-## [1] "Durchschnittlicher Gehaltsunterschied: 20.3752475247525"
+## [1] "Durchschnittlicher Gehaltsunterschied: 13.6338805970149"
 \end{verbatim}
 
 Das Ergebniss zeigt, dass entsprechend der vorher getroffenen Annahme,
@@ -1056,6 +1229,9 @@ verglichen und in Bezug gesetz werden.
 
 In diesem Abschnitt wird mit der eigentlichen Analyse, dem Ziel dieser
 Arbeit, der Erstellung einer Wettbewerbsanalyse begonnen.
+
+\subsubsection{Erstellung eines
+Wettbewerbsnetzwerkes}\label{erstellung-eines-wettbewerbsnetzwerkes}
 
 Zu diesem Zweck wird ein Netzwerk erstellt, das auf den
 Wettbewerbsbeziehungen zwischen Unternehmen basiert.
@@ -1129,7 +1305,7 @@ während direkte Wettbewerber in rot hervorgehoben sind.
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-16-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-19-1.pdf}}
 Es lassen sich einige interessante Beobachtungen aus dem Netzwerk
 ziehen. Einerseits sind ganz eindeutig Branchencluster zu erkennen, die
 auf die Branchenzugehörigkeit der Unternehmen hinweisen.
@@ -1148,14 +1324,17 @@ auf die Branchenzugehörigkeit der Unternehmen hinweisen.
   \FunctionTok{filter}\NormalTok{(Num\_Industries }\SpecialCharTok{\textgreater{}} \DecValTok{1}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
   \FunctionTok{arrange}\NormalTok{(}\FunctionTok{desc}\NormalTok{(Num\_Industries))}
 
-\CommentTok{\# Ausgabe der Unternehmen, die in mehreren Branchen vertreten sind}
-\FunctionTok{print}\NormalTok{(multi\_industry\_companies)}
+\CommentTok{\# Sind Unternehmen enthalten, die in mehreren Branchen vertreten sind?}
+\ControlFlowTok{if}\NormalTok{ (}\FunctionTok{nrow}\NormalTok{(multi\_industry\_companies) }\SpecialCharTok{==} \DecValTok{0}\NormalTok{) \{}
+  \FunctionTok{print}\NormalTok{(}\StringTok{"Keine Unternehmen in mehreren Branchen vertreten."}\NormalTok{)}
+\NormalTok{\} }\ControlFlowTok{else}\NormalTok{ \{}
+  \FunctionTok{print}\NormalTok{(}\StringTok{"Unternehmen in mehreren Branchen vertreten."}\NormalTok{)}
+\NormalTok{\}}
 \end{Highlighting}
 \end{Shaded}
 
 \begin{verbatim}
-## # A tibble: 0 x 2
-## # i 2 variables: Company Name <chr>, Num_Industries <int>
+## [1] "Keine Unternehmen in mehreren Branchen vertreten."
 \end{verbatim}
 
 Jedoch sind keine Unternehmen in mehreren Branchen vertreten, was darauf
@@ -1168,8 +1347,8 @@ Da aber wie oberhalb dargestellt, die Branchenzugehörigkeit eindeutig
 ist, und somit die Branchenzugehörigkeit keinen Mehrwert für die Analyse
 bietet, wird diese nicht weiter verfolgt.
 
-\subsubsection{Bloß direkte
-Wettbewerber}\label{blouxdf-direkte-wettbewerber}
+\subsubsection{Betrachtung fokussiert auf direkte
+Wettbewerber}\label{betrachtung-fokussiert-auf-direkte-wettbewerber}
 
 Aus diesem Grund wird das Netzwerk auf direkte Wettbewerber beschränkt,
 um die Analyse zu vereinfachen und die Relevanz der
@@ -1231,7 +1410,7 @@ Wettbewerbsbeziehungen zu erhöhen.
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-18-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-21-1.pdf}}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -1242,141 +1421,25 @@ Wettbewerbsbeziehungen zu erhöhen.
   \FunctionTok{arrange}\NormalTok{(}\FunctionTok{desc}\NormalTok{(AverageSalary))}
 
 \CommentTok{\# Ausgabe aller Unternehmen zusammen mit ihren Gehältern}
-\FunctionTok{print}\NormalTok{(salary\_data, }\AttributeTok{n =} \ConstantTok{Inf}\NormalTok{)}
+\FunctionTok{print}\NormalTok{(salary\_data, }\AttributeTok{n =} \DecValTok{10}\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
 
 \begin{verbatim}
-## # A tibble: 127 x 2
-##     `Company Name`                                      AverageSalary
-##     <chr>                                                       <dbl>
-##   1 Gallup                                                      238. 
-##   2 Credit Sesame                                               205  
-##   3 The Climate Corporation                                     194  
-##   4 Samsung Research America                                    177  
-##   5 Nektar Therapeutics                                         174  
-##   6 BioMarin Pharmaceutical                                     168  
-##   7 Adobe                                                       162  
-##   8 Glassdoor                                                   162  
-##   9 Netskope                                                    154. 
-##  10 Liberty Mutual Insurance                                    154. 
-##  11 Factual                                                     153  
-##  12 Visa Inc.                                                   153. 
-##  13 Sunovion                                                    151. 
-##  14 Sumo Logic                                                  150. 
-##  15 Western Digital                                             147. 
-##  16 Capgemini                                                   147  
-##  17 Tapjoy                                                      147. 
-##  18 Mitsubishi Electric Research Labs                           144. 
-##  19 1904labs                                                    144. 
-##  20 <intent>                                                    140  
-##  21 Demandbase                                                  139. 
-##  22 Walmart                                                     139  
-##  23 Red Ventures                                                134  
-##  24 Takeda Pharmaceuticals                                      132. 
-##  25 Johns Hopkins University Applied Physics Laboratory         130  
-##  26 CBS Interactive                                             128  
-##  27 Novetta                                                     128. 
-##  28 Information Builders                                        125  
-##  29 AstraZeneca                                                 124. 
-##  30 TriNet                                                      124. 
-##  31 Swiss Re                                                    123  
-##  32 L.A. Care Health Plan                                       120. 
-##  33 Equity Residential                                          118. 
-##  34 PennyMac                                                    117. 
-##  35 Affinity Solutions                                          114. 
-##  36 Pactera                                                     114. 
-##  37 Genesys                                                     112. 
-##  38 New England Biolabs                                         112. 
-##  39 IQVIA                                                       112. 
-##  40 Assurant                                                    110. 
-##  41 GNY Insurance Companies                                     110. 
-##  42 The Integer Group                                           110  
-##  43 The Buffalo Group                                           108. 
-##  44 Echo Global Logistics                                       108. 
-##  45 Johns Hopkins Health Care                                   108. 
-##  46 Mentor Graphics                                             107  
-##  47 NCSOFT                                                      106. 
-##  48 Porch                                                       106. 
-##  49 Medidata Solutions                                          105  
-##  50 PA Consulting                                               104  
-##  51 Maximus Real Estate Partners                                104. 
-##  52 Blueprint Medicines                                         102  
-##  53 Genworth                                                    102  
-##  54 Blue Cross & Blue Shield of Rhode Island                    100  
-##  55 Centro                                                      100  
-##  56 PatientPoint                                                100  
-##  57 Plymouth Rock Assurance                                      98.5
-##  58 Carmeuse                                                     98  
-##  59 Pilot Flying J Travel Centers LLC                            98  
-##  60 Eventbrite                                                   97.7
-##  61 Strategic Financial Solutions                                97.5
-##  62 comScore                                                     96.5
-##  63 CapTech                                                      95.5
-##  64 CyrusOne                                                     95  
-##  65 Object Partners                                              95  
-##  66 Remedy BPCI Partners, LLC.                                   95  
-##  67 Exelixis                                                     93.8
-##  68 23andMe                                                      92  
-##  69 L&T Infotech                                                 90  
-##  70 Lockheed Martin                                              89  
-##  71 Productive Edge                                              88.8
-##  72 Sauce Labs                                                   88  
-##  73 Fivestars                                                    87.5
-##  74 GSK                                                          87.5
-##  75 Moda Operandi                                                87.5
-##  76 Trilogy Ed                                                   87.5
-##  77 PNNL                                                         87.0
-##  78 AVANADE                                                      87  
-##  79 Biz2Credit Inc                                               87  
-##  80 Mteq                                                         87  
-##  81 Centauri                                                     86.5
-##  82 Esri                                                         85.8
-##  83 Rapid Response Monitoring                                    85.5
-##  84 DICK'S Sporting Goods - Corporate                            85  
-##  85 First Command Financial Services, Inc.                       85  
-##  86 ICW Group                                                    83  
-##  87 Edgewell Personal Care                                       82.5
-##  88 MITRE                                                        82.1
-##  89 Pharmavite                                                   81.5
-##  90 General Dynamics Information Technology                      81.2
-##  91 Caterpillar                                                  81  
-##  92 IHS Markit                                                   80.5
-##  93 Trace3                                                       80  
-##  94 Dayton Freight Lines, Inc.                                   79  
-##  95 Sapphire Digital                                             78  
-##  96 Vermeer                                                      77.5
-##  97 SullivanCotter                                               76  
-##  98 ExecOnline                                                   75.5
-##  99 Audentes Therapeutics                                        73  
-## 100 Beckman Coulter Diagnostics                                  73  
-## 101 United BioSource                                             72.5
-## 102 IZEA                                                         71.5
-## 103 CALIBRE Systems                                              71  
-## 104 Saama Technologies Inc                                       68.5
-## 105 Southwest Research Institute                                 67.7
-## 106 Pacific Northwest National Laboratory                        67  
-## 107 AmeriHealth Caritas                                          66.5
-## 108 AXION Healthcare Solutions                                   66  
-## 109 RTI International                                            65.5
-## 110 Guidepoint                                                   64.5
-## 111 Fareportal                                                   64.4
-## 112 Infosys                                                      62.5
-## 113 Boys Town Hospital                                           61.5
-## 114 National Student Clearinghouse                               61.5
-## 115 Motorola Solutions                                           61  
-## 116 WK Dickson                                                   60.5
-## 117 Associated Banc-Corp                                         60  
-## 118 DECISIVE ANALYTICS Corporation                               59  
-## 119 COUNTRY Financial                                            58.5
-## 120 C Space                                                      56.5
-## 121 CentralReach                                                 56.5
-## 122 DentaQuest                                                   56.5
-## 123 Boys Town                                                    52.5
-## 124 Citadel Federal Credit Union                                 49  
-## 125 Icon Health and Fitness                                      47  
-## 126 Greenway Health                                              37.5
-## 127 Catholic Health Initiatives                                  25
+## # A tibble: 107 x 2
+##    `Company Name`           AverageSalary
+##    <chr>                            <dbl>
+##  1 Gallup                            238.
+##  2 Credit Sesame                     205 
+##  3 The Climate Corporation           194 
+##  4 Liberty Mutual Insurance          179.
+##  5 Samsung Research America          177 
+##  6 Western Digital                   172.
+##  7 Glassdoor                         162 
+##  8 Netskope                          154.
+##  9 Factual                           153 
+## 10 Visa Inc.                         153.
+## # i 97 more rows
 \end{verbatim}
 
 Kommentar!!!\ldots..
@@ -1398,10 +1461,6 @@ Wettbewerbsnetzwerk dargelegt.
 \NormalTok{betweenness\_centrality }\OtherTok{\textless{}{-}} \FunctionTok{betweenness}\NormalTok{(g\_direct\_competitors)}
 \NormalTok{degree\_centrality }\OtherTok{\textless{}{-}} \FunctionTok{degree}\NormalTok{(g\_direct\_competitors)}
 \NormalTok{eigenvector\_centrality }\OtherTok{\textless{}{-}} \FunctionTok{eigen\_centrality}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{vector}
-
-\CommentTok{\# Wird in einem späteren Schritt für eine interaktive Visualisierung benötigt}
-\NormalTok{closeness\_centrality }\OtherTok{\textless{}{-}} \FunctionTok{closeness}\NormalTok{(g\_direct\_competitors)}
-\NormalTok{clustering\_coeff }\OtherTok{\textless{}{-}} \FunctionTok{transitivity}\NormalTok{(g\_direct\_competitors, }\AttributeTok{type =} \StringTok{"local"}\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
 
@@ -1433,7 +1492,7 @@ strategische Informationen benötigt.
   \AttributeTok{stringsAsFactors =} \ConstantTok{FALSE}
 \NormalTok{)}
 
-\CommentTok{\# Erstelle die Tabelle und zentriere sie links}
+\CommentTok{\# Erstellen einer Tabelle}
 \FunctionTok{kable}\NormalTok{(top\_betweenness\_df, }\AttributeTok{format =} \StringTok{"latex"}\NormalTok{, }\AttributeTok{booktabs =} \ConstantTok{TRUE}\NormalTok{, }\AttributeTok{align =} \StringTok{"l"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
 \FunctionTok{kable\_styling}\NormalTok{(}\AttributeTok{latex\_options =} \FunctionTok{c}\NormalTok{(}\StringTok{"striped"}\NormalTok{, }\StringTok{"hold\_position"}\NormalTok{), }\AttributeTok{position =} \StringTok{"left"}\NormalTok{)}
 \end{Highlighting}
@@ -1443,11 +1502,11 @@ strategische Informationen benötigt.
 \toprule
 Company & Betweenness\\
 \midrule
-\cellcolor{gray!10}{Booz Allen Hamilton} & \cellcolor{gray!10}{830}\\
-Gallup & 749\\
-\cellcolor{gray!10}{McKinsey \& Company} & \cellcolor{gray!10}{713}\\
-PA Consulting & 704\\
-\cellcolor{gray!10}{General Dynamics Information Technology} & \cellcolor{gray!10}{695}\\
+\cellcolor{gray!10}{Gallup} & \cellcolor{gray!10}{479}\\
+Booz Allen Hamilton & 470\\
+\cellcolor{gray!10}{PA Consulting} & \cellcolor{gray!10}{462}\\
+McKinsey \& Company & 462\\
+\cellcolor{gray!10}{General Dynamics Information Technology} & \cellcolor{gray!10}{354}\\
 \bottomrule
 \end{tabular}
 
@@ -1473,8 +1532,34 @@ PA Consulting & 704\\
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-21-1.pdf}}
-\ldots{} erläutern, bzw. weiterführen
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-24-1.pdf}}
+Der Scatterplot veranschaulicht die Korrelation zwischen dem Gehalt auf
+der x-Achse und der Betweenness Centrality auf der y-Achse.
+
+Die Mehrzahl der Unternehmen weist eine geringe Betweenness Centrality
+auf, wobei die Höhe der Vergütung eine untergeordnete Rolle spielt.
+Allerdings lassen sich auch Ausnahmen mit einer hohen Betweenness
+Centrality (über 200) bei moderaten Gehältern (ca. 75) beobachten. Dies
+lässt den Schluss zu, dass bestimmte Unternehmen eine zentrale
+Vermittlerrolle im Netzwerk einnehmen, ohne zwangsläufig die höchsten
+Gehälter zu offerieren.
+
+Es lässt sich keine eindeutige positive Korrelation zwischen Gehalt und
+Betweenness-Centrality feststellen. Dies impliziert, dass Unternehmen
+mit hoher Betweenness Centrality nicht zwangsläufig höhere Gehälter
+zahlen. Es ist denkbar, dass andere Faktoren wie beispielsweise die
+Größe des Unternehmens die Höhe der Gehälter stärker beeinflussen als
+die zentrale Position im Wettbewerbsnetzwerk.
+
+Die wenigen Unternehmen mit einer sehr hohen Betweenness Centrality
+könnten als strategische Vermittler im Markt auftreten und dabei
+möglicherweise andere Vorteile nutzen, anstatt ihre Gehälter zu erhöhen.
+Diese Erkenntnis lässt die Hypothese zu, dass Unternehmen, die über
+zahlreiche Verbindungen im Wettbewerbsnetzwerk verfügen, ihre
+Attraktivität nicht allein durch monetäre Zuwendungen, sondern auch
+durch andere Vorteile oder Reputation aufrechterhalten könnten.
+
+höheres Gehalt durch spezialisierung?
 
 \subsubsection{Degree-Zentralität}\label{degree-zentralituxe4t}
 
@@ -1517,13 +1602,37 @@ haben und gezielt in Gehälter investieren können.
 \toprule
 Company & Degree\\
 \midrule
-\cellcolor{gray!10}{Accenture} & \cellcolor{gray!10}{7}\\
-AstraZeneca & 5\\
-\cellcolor{gray!10}{Infosys} & \cellcolor{gray!10}{5}\\
-Booz Allen Hamilton & 5\\
-\cellcolor{gray!10}{BioMarin Pharmaceutical} & \cellcolor{gray!10}{4}\\
+\cellcolor{gray!10}{Accenture} & \cellcolor{gray!10}{6}\\
+C Space & 4\\
+\cellcolor{gray!10}{Capgemini} & \cellcolor{gray!10}{4}\\
+Caterpillar & 4\\
+\cellcolor{gray!10}{Liberty Mutual Insurance} & \cellcolor{gray!10}{4}\\
 \bottomrule
 \end{tabular}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Zusammenhang zwischen durchschnittliches Gehalt und Degree{-}Zentralität}
+\NormalTok{salary\_degree }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}
+  \AttributeTok{Salary =}\NormalTok{ salary\_data}\SpecialCharTok{$}\NormalTok{AverageSalary,}
+  \AttributeTok{Degree =}\NormalTok{ degree\_centrality[}\FunctionTok{match}\NormalTok{(salary\_data}\SpecialCharTok{$}\StringTok{\textasciigrave{}}\AttributeTok{Company Name}\StringTok{\textasciigrave{}}\NormalTok{, }\FunctionTok{names}\NormalTok{(degree\_centrality))]}
+\NormalTok{)}
+
+\CommentTok{\# Scatterplot}
+\FunctionTok{ggplot}\NormalTok{(salary\_degree, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Salary, }\AttributeTok{y =}\NormalTok{ Degree)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_point}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Scatterplot of Salary vs. Degree Centrality"}\NormalTok{,}
+       \AttributeTok{x =} \StringTok{"Salary"}\NormalTok{, }\AttributeTok{y =} \StringTok{"Degree Centrality"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{theme\_minimal}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{theme}\NormalTok{(}
+    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{14}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
+    \AttributeTok{axis.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{12}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
+    \AttributeTok{axis.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{12}\NormalTok{)}
+\NormalTok{  )}
+\end{Highlighting}
+\end{Shaded}
+
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-26-1.pdf}}
 
 \subsubsection{Eigenvector-Zentralität}\label{eigenvector-zentralituxe4t}
 
@@ -1562,94 +1671,186 @@ Anforderungen eines zentralen Wettbewerbsnetzwerks gerecht zu werden.
 \toprule
 Company & Eigenvector\\
 \midrule
-\cellcolor{gray!10}{Takeda Pharmaceuticals} & \cellcolor{gray!10}{1.0000000}\\
-Novartis & 0.6885416\\
-\cellcolor{gray!10}{Pfizer} & \cellcolor{gray!10}{0.5750772}\\
-Baxter & 0.5510613\\
-\cellcolor{gray!10}{AstraZeneca} & \cellcolor{gray!10}{0.3694600}\\
+\cellcolor{gray!10}{PNNL} & \cellcolor{gray!10}{1.0000000}\\
+Los Alamos National Laboratory & 0.5887841\\
+\cellcolor{gray!10}{Oak Ridge National Laboratory} & \cellcolor{gray!10}{0.5887841}\\
+National Renewable Energy Lab & 0.5887841\\
+\cellcolor{gray!10}{Pacific Northwest National Laboratory} & \cellcolor{gray!10}{0.2000000}\\
 \bottomrule
 \end{tabular}
 
-\subsection{Cluster-Analyse}\label{cluster-analyse}
-
-Klassifizierung der Unternehmen: Unternehmen werden basierend auf ihrer
-Netzwerkposition in zentrale (innerhalb von Netzwerken) und periphere
-(am Rand der Netzwerke) Gruppen klassifiziert. Gehaltsvergleich:
-Verwende Boxplots oder Histogramme, um die Gehaltsverteilung in beiden
-Gruppen zu vergleichen. Beispiel: „Die Boxplots zeigen, dass die
-medianen Gehälter in zentralen Positionen signifikant höher sind als in
-peripheren Positionen.``
-
-Abschließend soll noch eine Clusteranalyse durchgeführt werden, die die
-Gehalt in Bezug auf Standort und Wettbewerb kombiniert betrachtet.
-\#\#\# Cluster-Analyse Clusteranalyse innerhalb des geografischen und
-Wettbewerbsnetzwerks. Cluster von Unternehmen nach Gehalt und Standort
-innerhalb des Wettbewerbsnetzwerks: Korrelation zwischen Gehältern und
-der Stärke von Wettbewerb und regionaler Vernetzung. Regionale
-Gehaltsklassen: Visualisierung der regionalen Gehaltsspreizung in Bezug
-auf Netzwerkcluster, z.B. ob Cluster in wirtschaftsstarken Regionen
-höhere Durchschnittsgehälter bieten.
-
 \begin{Shaded}
 \begin{Highlighting}[]
-\CommentTok{\# Detect communities}
-\NormalTok{communities }\OtherTok{\textless{}{-}} \FunctionTok{cluster\_louvain}\NormalTok{(g\_direct\_competitors)}
+\CommentTok{\# Zusammenhang zwischen durchschnittliches Gehalt und Eigenvector{-}Zentralität}
+\NormalTok{salary\_eigenvector }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}
+  \AttributeTok{Salary =}\NormalTok{ salary\_data}\SpecialCharTok{$}\NormalTok{AverageSalary,}
+  \AttributeTok{Eigenvector =}\NormalTok{ eigenvector\_centrality[}\FunctionTok{match}\NormalTok{(salary\_data}\SpecialCharTok{$}\StringTok{\textasciigrave{}}\AttributeTok{Company Name}\StringTok{\textasciigrave{}}\NormalTok{, }\FunctionTok{names}\NormalTok{(eigenvector\_centrality))]}
+\NormalTok{)}
+
+\CommentTok{\# Scatterplot}
+\FunctionTok{ggplot}\NormalTok{(salary\_eigenvector, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Salary, }\AttributeTok{y =}\NormalTok{ Eigenvector)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_point}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Scatterplot of Salary vs. Eigenvector Centrality"}\NormalTok{,}
+       \AttributeTok{x =} \StringTok{"Salary"}\NormalTok{, }\AttributeTok{y =} \StringTok{"Eigenvector Centrality"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{theme\_minimal}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{theme}\NormalTok{(}
+    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{14}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
+    \AttributeTok{axis.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{12}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
+    \AttributeTok{axis.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{12}\NormalTok{)}
+\NormalTok{  )}
 \end{Highlighting}
 \end{Shaded}
 
-Vllt: bevor wir mit den Clustern loslegen TODO ``Arc Diagramm'' zu den
-regionalen Clustern von der geografischen Netzwerkanalyse
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-28-1.pdf}}
 
-\subsection{Ergänzung zu den
-Zentralitätsanalysen}\label{erguxe4nzung-zu-den-zentralituxe4tsanalysen}
+\subsection{Cluster-Analyse}\label{cluster-analyse}
+
+Die Anwendung von Community-Detection-Methoden, wie beispielsweise
+Louvain oder Walktrap, ermöglicht die Identifikation von Clustern von
+Unternehmen, die sich durch einen besonders engen Wettbewerb
+auszeichnen.
+
+Im Rahmen der Klassifizierung und Visualisierung erfolgt eine farbliche
+Markierung der identifizierten Cluster im Netzwerk, um eine bessere
+Übersicht über die Wettbewerbsgruppen zu gewinnen.
+
+Im Rahmen der Untersuchung wird ermittelt, ob Cluster existieren, in
+denen besonders hohe oder niedrige Gehälter überwiegen, und ob diese
+Cluster eine gemeinsame Markt- oder Branchenstruktur aufweisen. \#\#\#
+Clustering Identifikation
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Louvain Community Detection}
+\NormalTok{louvain\_community }\OtherTok{\textless{}{-}} \FunctionTok{cluster\_louvain}\NormalTok{(g\_direct\_competitors, }\AttributeTok{resolution =} \FloatTok{0.1}\NormalTok{)}
+
+\CommentTok{\# Walktrap Community Detection}
+\NormalTok{walktrap\_community }\OtherTok{\textless{}{-}} \FunctionTok{cluster\_walktrap}\NormalTok{(g\_direct\_competitors, }\AttributeTok{steps =} \DecValTok{2}\NormalTok{)}
+
+\CommentTok{\# Wähle Louvain als Community{-}Detection{-}Methode}
+\NormalTok{communities }\OtherTok{\textless{}{-}}\NormalTok{ louvain\_community}
+
+
+\CommentTok{\# Füge die Community{-}Informationen zu den Knoten des Graphen hinzu}
+\FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{community }\OtherTok{\textless{}{-}} \FunctionTok{membership}\NormalTok{(communities)}
+
+\CommentTok{\# Erstelle eine Farbpalette für die Communities}
+\NormalTok{num\_communities }\OtherTok{\textless{}{-}} \FunctionTok{length}\NormalTok{(}\FunctionTok{unique}\NormalTok{(}\FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{community))}
+\ControlFlowTok{if}\NormalTok{ (num\_communities }\SpecialCharTok{\textgreater{}} \DecValTok{12}\NormalTok{) \{}
+\NormalTok{  community\_colors }\OtherTok{\textless{}{-}} \FunctionTok{colorRampPalette}\NormalTok{(}\FunctionTok{brewer.pal}\NormalTok{(}\DecValTok{12}\NormalTok{, }\StringTok{"Set3"}\NormalTok{))(num\_communities)}
+\NormalTok{\} }\ControlFlowTok{else}\NormalTok{ \{}
+\NormalTok{  community\_colors }\OtherTok{\textless{}{-}} \FunctionTok{brewer.pal}\NormalTok{(num\_communities, }\StringTok{"Set3"}\NormalTok{)}
+\NormalTok{\}}
+
+\CommentTok{\# Weise die Farben den Knoten basierend auf ihrer Community zu}
+\FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{color }\OtherTok{\textless{}{-}}\NormalTok{ community\_colors[}\FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{community]}
+
+\CommentTok{\# Visualisiere das Netzwerk mit den Community{-}Farben}
+\FunctionTok{plot}\NormalTok{(g\_direct\_competitors, }\AttributeTok{vertex.label =} \ConstantTok{NA}\NormalTok{,}
+     \AttributeTok{vertex.size =} \DecValTok{3}\NormalTok{,  }\CommentTok{\# Kleinere Knoten}
+     \AttributeTok{edge.width =} \DecValTok{1} \SpecialCharTok{*} \FunctionTok{E}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{weight,  }\CommentTok{\# Reduzierte Gewichtung der Kanten}
+     \AttributeTok{edge.arrow.size =} \DecValTok{1}\NormalTok{,}
+     \AttributeTok{main =} \StringTok{"Unternehmensnetzwerk mit Community{-}Detection (Louvain)"}\NormalTok{,}
+     \AttributeTok{layout =}\NormalTok{ layout\_with\_fr}
+\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-29-1.pdf}}
+
+\subsubsection{Gehaltsunterschiede zwischen den
+Clustern}\label{gehaltsunterschiede-zwischen-den-clustern}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Untersuche die Gehälter in den verschiedenen Clustern}
+\NormalTok{community\_salary }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}
+  \AttributeTok{Community =} \FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{community,}
+  \AttributeTok{Salary =} \FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{salary}
+\NormalTok{)}
+
+\CommentTok{\# Berechne das durchschnittliche Gehalt pro Community}
+\NormalTok{avg\_salary\_per\_community }\OtherTok{\textless{}{-}}\NormalTok{ community\_salary }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{group\_by}\NormalTok{(Community) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{summarise}\NormalTok{(}\AttributeTok{AverageSalary =} \FunctionTok{mean}\NormalTok{(Salary, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{))}
+
+\CommentTok{\# Visualisiere die durchschnittlichen Gehälter pro Community}
+\FunctionTok{ggplot}\NormalTok{(avg\_salary\_per\_community, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =} \FunctionTok{factor}\NormalTok{(Community), }\AttributeTok{y =}\NormalTok{ AverageSalary, }\AttributeTok{fill =} \FunctionTok{factor}\NormalTok{(Community))) }\SpecialCharTok{+}
+  \FunctionTok{geom\_bar}\NormalTok{(}\AttributeTok{stat =} \StringTok{"identity"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{scale\_fill\_manual}\NormalTok{(}\AttributeTok{values =}\NormalTok{ community\_colors) }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Durchschnittliches Gehalt pro Community"}\NormalTok{,}
+       \AttributeTok{x =} \StringTok{"Community"}\NormalTok{,}
+       \AttributeTok{y =} \StringTok{"Durchschnittliches Gehalt"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{theme\_minimal}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{theme}\NormalTok{(}
+    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{14}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
+    \AttributeTok{axis.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{12}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
+    \AttributeTok{axis.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{12}\NormalTok{),}
+    \AttributeTok{legend.position =} \StringTok{"none"}
+\NormalTok{  )}
+\end{Highlighting}
+\end{Shaded}
+
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-30-1.pdf}}
+
+TODO ``Arc Diagramm'' zu den regionalen Clustern von der geografischen
+Netzwerkanalyse
+
+\subsection{Zurückbesinnen auf die geografische
+Analyse?}\label{zuruxfcckbesinnen-auf-die-geografische-analyse}
+
+\section{Abschließende Betrachtung mittels interaktiver
+Visualisierung}\label{abschlieuxdfende-betrachtung-mittels-interaktiver-visualisierung}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{closeness\_centrality }\OtherTok{\textless{}{-}} \FunctionTok{closeness}\NormalTok{(g\_direct\_competitors)}
+\NormalTok{clustering\_coeff }\OtherTok{\textless{}{-}} \FunctionTok{transitivity}\NormalTok{(g\_direct\_competitors, }\AttributeTok{type =} \StringTok{"local"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
 
 \begin{Shaded}
 \begin{Highlighting}[]
 \CommentTok{\# Prepare data for visNetwork}
-\NormalTok{nodes }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}\AttributeTok{id =} \FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{name,}
-                    \AttributeTok{label =} \FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{name,}
-                    \AttributeTok{group =} \FunctionTok{membership}\NormalTok{(communities),}
-                    \AttributeTok{value =}\NormalTok{ degree\_centrality,}
-                    \AttributeTok{title =} \FunctionTok{paste}\NormalTok{(}\StringTok{"Degree:"}\NormalTok{, degree\_centrality, }
-                                  \StringTok{"\textless{}br\textgreater{}Betweenness:"}\NormalTok{, betweenness\_centrality, }
-                                  \StringTok{"\textless{}br\textgreater{}Closeness:"}\NormalTok{, closeness\_centrality, }
-                                  \StringTok{"\textless{}br\textgreater{}Eigenvector:"}\NormalTok{, eigenvector\_centrality))}
+\StringTok{\textquotesingle{}nodes \textless{}{-} data.frame(id = V(g\_direct\_competitors)$name,}
+\StringTok{                    label = V(g\_direct\_competitors)$name,}
+\StringTok{                    group = membership(communities),}
+\StringTok{                    value = degree\_centrality,}
+\StringTok{                    title = paste("Degree:", degree\_centrality, }
+\StringTok{                                  "\textless{}br\textgreater{}Betweenness:", betweenness\_centrality,}
+\StringTok{                                  "\textless{}br\textgreater{}Closeness:", closeness\_centrality,}
+\StringTok{                                  "\textless{}br\textgreater{}Eigenvector:", eigenvector\_centrality))}
 
-\NormalTok{edges }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}\AttributeTok{from =} \FunctionTok{as.character}\NormalTok{(edges}\SpecialCharTok{$}\NormalTok{from), }\AttributeTok{to =} \FunctionTok{as.character}\NormalTok{(edges}\SpecialCharTok{$}\NormalTok{to))}
+\StringTok{edges \textless{}{-} data.frame(from = as.character(edges$from), to = as.character(edges$to))}
 
-\CommentTok{\# Create interactive network visualization}
-\FunctionTok{visNetwork}\NormalTok{(nodes, edges) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{visOptions}\NormalTok{(}\AttributeTok{highlightNearest =} \ConstantTok{TRUE}\NormalTok{, }\AttributeTok{nodesIdSelection =} \ConstantTok{TRUE}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{visGroups}\NormalTok{(}\AttributeTok{groupname =} \StringTok{"1"}\NormalTok{, }\AttributeTok{color =} \StringTok{"red"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{visGroups}\NormalTok{(}\AttributeTok{groupname =} \StringTok{"2"}\NormalTok{, }\AttributeTok{color =} \StringTok{"blue"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{visGroups}\NormalTok{(}\AttributeTok{groupname =} \StringTok{"3"}\NormalTok{, }\AttributeTok{color =} \StringTok{"green"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{visGroups}\NormalTok{(}\AttributeTok{groupname =} \StringTok{"4"}\NormalTok{, }\AttributeTok{color =} \StringTok{"yellow"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{visGroups}\NormalTok{(}\AttributeTok{groupname =} \StringTok{"5"}\NormalTok{, }\AttributeTok{color =} \StringTok{"purple"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{visGroups}\NormalTok{(}\AttributeTok{groupname =} \StringTok{"6"}\NormalTok{, }\AttributeTok{color =} \StringTok{"orange"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{visGroups}\NormalTok{(}\AttributeTok{groupname =} \StringTok{"7"}\NormalTok{, }\AttributeTok{color =} \StringTok{"pink"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{visLayout}\NormalTok{(}\AttributeTok{randomSeed =} \DecValTok{123}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{visLegend}\NormalTok{()}
+\StringTok{\# Create interactive network visualization}
+\StringTok{visNetwork(nodes, edges) \%\textgreater{}\%}
+\StringTok{  visOptions(highlightNearest = TRUE, nodesIdSelection = TRUE) \%\textgreater{}\%}
+\StringTok{  visGroups(groupname = "1", color = "red") \%\textgreater{}\%}
+\StringTok{  visGroups(groupname = "2", color = "blue") \%\textgreater{}\%}
+\StringTok{  visGroups(groupname = "3", color = "green") \%\textgreater{}\%}
+\StringTok{  visGroups(groupname = "4", color = "yellow") \%\textgreater{}\%}
+\StringTok{  visGroups(groupname = "5", color = "purple") \%\textgreater{}\%}
+\StringTok{  visGroups(groupname = "6", color = "orange") \%\textgreater{}\%}
+\StringTok{  visGroups(groupname = "7", color = "pink") \%\textgreater{}\%}
+\StringTok{  visLayout(randomSeed = 123) \%\textgreater{}\%}
+\StringTok{  visLegend()\textquotesingle{}}
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-25-1.pdf}}
+\begin{verbatim}
+## [1] "nodes <- data.frame(id = V(g_direct_competitors)$name,\n                    label = V(g_direct_competitors)$name,\n                    group = membership(communities),\n                    value = degree_centrality,\n                    title = paste(\"Degree:\", degree_centrality, \n                                  \"<br>Betweenness:\", betweenness_centrality,\n                                  \"<br>Closeness:\", closeness_centrality,\n                                  \"<br>Eigenvector:\", eigenvector_centrality))\n\nedges <- data.frame(from = as.character(edges$from), to = as.character(edges$to))\n\n# Create interactive network visualization\nvisNetwork(nodes, edges) %>%\n  visOptions(highlightNearest = TRUE, nodesIdSelection = TRUE) %>%\n  visGroups(groupname = \"1\", color = \"red\") %>%\n  visGroups(groupname = \"2\", color = \"blue\") %>%\n  visGroups(groupname = \"3\", color = \"green\") %>%\n  visGroups(groupname = \"4\", color = \"yellow\") %>%\n  visGroups(groupname = \"5\", color = \"purple\") %>%\n  visGroups(groupname = \"6\", color = \"orange\") %>%\n  visGroups(groupname = \"7\", color = \"pink\") %>%\n  visLayout(randomSeed = 123) %>%\n  visLegend()"
+\end{verbatim}
 
 \begin{Shaded}
 \begin{Highlighting}[]
 \CommentTok{\# Fügt ein Bild der interaktiven Netzwerkvisualisierung hinzu}
-\NormalTok{knitr}\SpecialCharTok{::}\FunctionTok{include\_graphics}\NormalTok{(}\StringTok{"interaktive\_Netzwerke\_Bilder/Übersicht.png"}\NormalTok{)}
+\CommentTok{\# knitr::include\_graphics("interaktive\_Netzwerke\_Bilder/Übersicht.png")}
+
+\CommentTok{\# knitr::include\_graphics("interaktive\_Netzwerke\_Bilder/NVDIA.png")}
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{interaktive_Netzwerke_Bilder/Übersicht.png}}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\NormalTok{knitr}\SpecialCharTok{::}\FunctionTok{include\_graphics}\NormalTok{(}\StringTok{"interaktive\_Netzwerke\_Bilder/NVDIA.png"}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
-\pandocbounded{\includegraphics[keepaspectratio]{interaktive_Netzwerke_Bilder/NVDIA.png}}
 Zugriff auf die interaktive Visualisierung über das Repository
 (Dateiname: network.html): \url{https://github.com/Mzaex7/SNA}
 
@@ -1657,16 +1858,20 @@ Zugriff auf die interaktive Visualisierung über das Repository
 
 \section{Conclusion}\label{conclusion}
 
-Zusammenfassung der zentralen Ergebnisse:
+Zusammenfassung der Ergebnisse: Fasse die zentralen Erkenntnisse zur
+Rolle des Wettbewerbs im Gehaltsgefüge von Data Science-Positionen
+zusammen, wie etwa: „Unternehmen in Clustern mit hoher
+Degree-Zentralität bieten im Durchschnitt 15 \% höhere Gehälter als
+isolierte Unternehmen.``
 
-Bedeutung: Diskutiere, wie wichtig geografische Nähe und
-Wettbewerbsumfeld für die Karriereentwicklung von Data Scientists sind.
+Bedeutung der Ergebnisse: Diskutiere die Bedeutung der
+Wettbewerbsstruktur und welche Unternehmen durch ihre Position im
+Netzwerk von Wettbewerbsvorteilen und Talentrekrutierung profitieren.
 
-Praktische Implikationen: Gib Empfehlungen für Jobuchende, wie sie
-Standorte und Unternehmen auswählen sollten, um die besten
-Gehaltsaussichten zu haben. Dies könnte auch für Unternehmen von
-Interesse sein, um zu verstehen, wie sie ihre Position im Markt
-verbessern können.
+Praktische Empfehlungen: Leite Handlungsempfehlungen für
+Berufseinsteiger und Unternehmen ab: Wo und wie sollten Fachkräfte ihre
+Karrieresuche fokussieren? Welche Unternehmen sollten strategische
+Investitionen in Gehälter und Talentförderung in Erwägung ziehen?
 
 \newpage
 

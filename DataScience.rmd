@@ -30,6 +30,7 @@ Zunächst müssen die benötigten Bibliotheken installiert werden:
 - $ install.packages("knitr")
 - $ install.packages("ggplot2")
 - $ install.packages("RColorBrewer")
+- $ install.packages("skimr")
 
 Und anschließend geladen werden:
 ```{r setup, message=FALSE, warning=FALSE}
@@ -43,6 +44,7 @@ library(kableExtra)
 library(webshot)
 library(ggplot2)
 library(RColorBrewer)
+library(skimr)
 ```
 
 
@@ -108,8 +110,8 @@ Nachdem die Daten in Python extern als Vorbereitung aufbereitet wurden, kann nun
 Dabei wurde sich an https://www.kaggle.com/code/fahadrehman07/data-science-job-salary-prediction-glassdoor orientiert.
 
 ### CSV einlesen
-```{r}
-data <- read_csv("data/Glassdoor_DataScience_Salary.csv")
+```{r,}
+data <- read_csv("data/Glassdoor_DataScience_Salary.csv", show_col_types = FALSE)
 ```
 
 Die vorliegende Arbeit basiert auf einem Datensatz von Kaggle, der Informationen über Data Science Jobs in verschiedenen Unternehmen für den US-amerikanischen Markt enthält. 
@@ -126,11 +128,15 @@ zur Untersuchung von Gehaltstrends oder zur Identifizierung der am besten bewert
 Der Datensatz umfasst konkret die folgenden Spalten:
 
 ### Erste Ansicht der Daten
-```{r}
+```{r, message=FALSE, warning=FALSE}
 head(data, 5)
 spec(data)
-summary(data)
+
+# Erstellen eine schönen Zusammenfassung des Datensatzes
+skim(data)
 ```
+
+
 Im Folgenden wird eine Übersicht der wesentlichen Spalten präsentiert:
 
 - `Job Title`: Die Berufsbezeichnung, sie gibt Aufschluss über die Tätigkeit.
@@ -148,10 +154,9 @@ Es zeigt sich, dass eine Vielzahl von Spalten für die vorliegende Untersuchung 
 Infolgedessen werden in einem späteren Teil der Arbeit irrelevante Spalten, wie beispielsweise die Kenntnisse in Python, R Studio, Spark und ähnlichen Programmen, welche ursprünglich aus der Jobbeschreibung extrahiert wurden, entfernt.
 
 Nachdem die Daten in Python mit Hilfe von Pandas bereinigt, ergänzt und bearbeitet wurden, können sie nun in R eingelesen werden. 
-Dabei wurde sich an https://www.kaggle.com/code/maxzeitler/data-science-job-salary-prediction-glassdoor/edit orientiert.
 
 Im Folgenden wird eine erste Betrachtung der Daten vorgenommen. Zu diesem Zweck werden die Jobs in New York nach ihren jeweiligen Vergütungen geordnet und in Form eines Balkendiagramms dargestellt.
-```{r, fig.height=15, fig.width=15}
+```{r, fig.height=10}
 
 # Filterung der Daten für New York
 data_ny <- data %>%
@@ -288,28 +293,41 @@ if (all(selected_data$State == selected_data$job_state, na.rm = TRUE)) {
 ### Überprüfung auf weitere fehlende Werte
 
 ```{r}
-# Überprüfen auf NA-Werte
 
+
+```
+
+```{r}
+# Überprüfen auf NA-Werte
 na_counts <- colSums(is.na(data))
-print("Anzahl der NA-Werte pro Spalte:")
+
+# Anzahl der NA-Werte pro Spalte:
 print(na_counts)
+
+# Überprüfen auf "na"-Werte (kleingeschrieben)
+na_string_counts <- sapply(data, function(x) sum(tolower(x) == "na", na.rm = TRUE))
+
+# Anzahl der "na"-Werte pro Spalte:
+print(na_string_counts)
 
 # Überprüfen auf -1-Werte
 neg_one_counts <- sapply(data, function(x) sum(x == -1, na.rm = TRUE))
-print("Anzahl der -1-Werte pro Spalte:")
+
+# Anzahl der -1 Werte in der Spalte Competitors
 print(neg_one_counts)
 ```
 
-Es zeigt sich, dass es keine NA-Werte gibt, jedoch einige -1-Werte, die entfert werden sollten.
+Es zeigt sich, dass es nur in der Spalte "Competitors" relevante -1 Werte gibt. Diese müssen nun entfernt werden.
+Nicht störend für diese Analyse sind die "na"-Werte in der Spalte "Job_simp".
 
 ```{r}
-# Entfernen von Zeilen mit -1 Werten
+# Entfernen von Zeilen mit -1 Werten in der Spalte "Competitors"
 data <- data %>%
-  filter_all(all_vars(. != -1))
+  filter(Competitors != -1)
 
 # Überprüfen auf -1-Werte nach Entfernung
 neg_one_counts <- sapply(data, function(x) sum(x == -1, na.rm = TRUE))
-print("Anzahl der -1 Werte pro Spalte:")
+# Anzahl der -1 Werte pro Spalte:
 print(neg_one_counts)
 ```
 
@@ -330,18 +348,51 @@ print(data %>% names())
 
 ```
 
-Nachdem die Bereinigung des Datensatzes abgeschlossen ist, kann mit der Analyse begonnen werden.
+
+### Bereinigung der irrelevanten Spalten
+Im Rahmen dieser Arbeit erfolgt eine Analyse von Gehältern und Wettbewerbsbeziehungen für den Data-Science-Jobmarkt.
+ Dabei ist zu überprüfen, ob alle Spalten tatsächlich konkrete Data-Science-Jobs repräsentieren.
+
+Bei einer ersten Betrachtung des in der Einleitung präsentierten Balkendiagramms wird ersichtlich, 
+dass eine Reihe von Jobtiteln nicht unmittelbar mit dem Bereich der "Data Science" assoziiert werden können.
+
+```{r}
+# ausgeben alles uniqeuen Job Title und Job_simp
+print(data %>% select(`Job Title`, `Job_simp`) %>% unique())
+```
 
 
+Es lässt sich feststellen, dass der Datensatz auch eine Reihe von Jobs von Wissenschaftlern umfasst, 
+die nicht unmittelbar mit Data Science assoziiert werden.
+Diese Jobs sind zudem nicht mit einem vereinfachten Jobtitel ("Job_simp") versehen, der auf eine Tätigkeit im Bereich Data Science hinweist.
+Daher ist es erforderlich, alle Datensätze mit na-Werten in der Spalte "Job_simp" zu eliminieren.
+Diese besutzen auch eine andere Schreibweise, deswegen wurden sie nicht direkt entfernt.
 
-## Netzwerkbildung und Visualisierung
-### Geografische Vorbetrachtung
+
+```{r}
+# Entfernen von Zeilen mit NA-Werten in der Spalte "Job_simp"
+data <- data %>%
+  filter(Job_simp != "na")
+
+# Überprüfen auf "na"-Werte in der Spalte "Job_simp"
+na_job_simp <- sum(data$Job_simp == "na")
+
+print(paste("Anzahl der 'na'-Werte in der Spalte 'Job_simp':", na_job_simp))
+
+print("Alle verbleibenden Jobtitel:")
+print(data %>% select(`Job Title`, Job_simp) %>% unique())
+```
+
+
+Nachdem die Bereinigung des Datensatzes nun abgeschlossen ist, kann mit der Analyse begonnen werden.
+
+## Geografische Vorbetrachtung
 Da bei der Betrachtung der Wettbewerbsstruktur die geografische Nähe von Unternehmen auch eine Rolle spielen kann, 
 soll zunächst ein Netzwerk erstellt werden, das auf der geografischen Nähe von Unternehmen basiert. 
 Diese annahme beruht darauf, dass Unternehmen in derselben Region wahrscheinlich ähnliche Gehälter anbieten.
 Dies soll Überprüft werden um diese Arbeit um eine weiter Dimension zu erweitern.
 
-#### Erstellung eines Geografischen Netzwerkes
+### Erstellung eines Geografischen Netzwerkes
 Die Gewichtung erfolgt linear, wobei jeder Standort eine Grundgröße von 3 hat, und für jedes Unternehmen an diesem Standort wird die Größe um 0.5 erhöht.
 Ab einer Größe von 4.5 wird die Farbe des Standorts geändert, um die Standorte mit mehreren Unternehmen hervorzuheben.
 
@@ -412,7 +463,7 @@ legend("topright",
 
 Wie zu erwarten war, sind die meisten Unternehmen Ballungszentren wie New York, Chicago und San Francisco angesiedelt.
 
-#### Vergleich der Gehälter zwischen den Hotspot- und den anderen Regionen
+### Vergleich der Gehälter zwischen den Hotspot- und den anderen Regionen
 ```{r, fig.height=5, fig.width=6}
 # Ausgabe der farbigen Standorte
 print(large_locations)
@@ -470,6 +521,7 @@ Deswegen sollen am Ende dieser Arbeit die Ergebnisse der Wettbewerbsanalyse mit 
 ## Wettbewerbsnetzwerk
 In diesem Abschnitt wird mit der eigentlichen Analyse, dem Ziel dieser Arbeit, der Erstellung einer Wettbewerbsanalyse begonnen.
 
+### Erstellung eines Wettbewerbsnetzwerkes
 Zu diesem Zweck wird ein Netzwerk erstellt, das auf den Wettbewerbsbeziehungen zwischen Unternehmen basiert. 
 
 Die Wettbewerbsbeziehungen werden anhand der in der Spalte "Competitors" aufgeführten Unternehmen definiert.
@@ -485,7 +537,6 @@ Branchenbezogene Wettbewerbsbeziehungen sind in blau dargestellt, während direk
 ```{r, fig.height=15, fig.width=15}
 # Extrahiere Unternehmen und ihre Wettbewerber
 edges <- data %>%
-  filter(!is.na(Competitors) & Competitors != "-1") %>%
   separate_rows(Competitors, sep = ", ") %>%
   select(`Company Name`, Competitors) %>%
   rename(from = `Company Name`, to = Competitors) %>%
@@ -493,7 +544,6 @@ edges <- data %>%
 
 # Füge Unternehmen in derselben Branche mit Gewichtung 0.5 hinzu
 industry_edges <- data %>%
-  filter(!is.na(Industry)) %>%
   select(`Company Name`, Industry) %>%
   inner_join(
     data %>% select(`Company Name`, Industry),
@@ -545,8 +595,12 @@ multi_industry_companies <- data %>%
   filter(Num_Industries > 1) %>%
   arrange(desc(Num_Industries))
 
-# Ausgabe der Unternehmen, die in mehreren Branchen vertreten sind
-print(multi_industry_companies)
+# Sind Unternehmen enthalten, die in mehreren Branchen vertreten sind?
+if (nrow(multi_industry_companies) == 0) {
+  print("Keine Unternehmen in mehreren Branchen vertreten.")
+} else {
+  print("Unternehmen in mehreren Branchen vertreten.")
+}
 ```
 Jedoch sind keine Unternehmen in mehreren Branchen vertreten, was darauf hindeutet, dass die Branchenzugehörigkeit eindeutig ist.
 Aber es gibt einige Unternehmen, die mit direkter Konkurrenz die verschiedenen Branchen verbinden. 
@@ -565,14 +619,13 @@ keinen Mehrwert für die Analyse bietet, wird diese nicht weiter verfolgt.
 
 
 
-### Bloß direkte Wettbewerber
+### Betrachtung fokussiert auf direkte Wettbewerber
 Aus diesem Grund wird das Netzwerk auf direkte Wettbewerber beschränkt, um die Analyse zu vereinfachen und die Relevanz der Wettbewerbsbeziehungen zu erhöhen.
 
 ```{r, fig.width=15, fig.height=15}
 
 # Extrahiere Unternehmen und ihre Wettbewerber
 edges <- data %>%
-  filter(!is.na(Competitors) & Competitors != "-1") %>%
   separate_rows(Competitors, sep = ", ") %>%
   select(`Company Name`, Competitors) %>%
   rename(from = `Company Name`, to = Competitors) %>%
@@ -629,7 +682,7 @@ salary_data <- data %>%
   arrange(desc(AverageSalary))
 
 # Ausgabe aller Unternehmen zusammen mit ihren Gehältern
-print(salary_data, n = Inf)
+print(salary_data, n = 10)
 ```
 
 Kommentar!!!.....
@@ -645,10 +698,6 @@ Folgend wird die Berechnung der Zentralitätsmaße für die Unternehmen im Wettb
 betweenness_centrality <- betweenness(g_direct_competitors)
 degree_centrality <- degree(g_direct_competitors)
 eigenvector_centrality <- eigen_centrality(g_direct_competitors)$vector
-
-# Wird in einem späteren Schritt für eine interaktive Visualisierung benötigt
-closeness_centrality <- closeness(g_direct_competitors)
-clustering_coeff <- transitivity(g_direct_competitors, type = "local")
 ```
 
 ### Betweenness-Zentralität
@@ -672,12 +721,13 @@ top_betweenness_df <- data.frame(
   stringsAsFactors = FALSE
 )
 
-# Erstelle die Tabelle und zentriere sie links
+# Erstellen einer Tabelle
 kable(top_betweenness_df, format = "latex", booktabs = TRUE, align = "l") %>%
 kable_styling(latex_options = c("striped", "hold_position"), position = "left")
 ```
 
 ```{r}
+
 # Zusammenhang zwischen durchschnittliches Gehalt und Betweenness-Zentralität
 salary_betweenness <- data.frame(
   Salary = salary_data$AverageSalary,
@@ -697,8 +747,25 @@ ggplot(salary_betweenness, aes(x = Salary, y = Betweenness)) +
   )
 
 ```
-... erläutern, bzw. weiterführen
+Der Scatterplot veranschaulicht die Korrelation zwischen dem Gehalt auf der x-Achse und der Betweenness Centrality auf der y-Achse.
 
+Die Mehrzahl der Unternehmen weist eine geringe Betweenness Centrality auf, wobei die Höhe der Vergütung eine untergeordnete Rolle spielt. 
+Allerdings lassen sich auch Ausnahmen mit einer hohen Betweenness Centrality (über 200) bei moderaten Gehältern (ca. 75) beobachten. 
+Dies lässt den Schluss zu, dass bestimmte Unternehmen eine zentrale Vermittlerrolle im Netzwerk einnehmen, 
+ohne zwangsläufig die höchsten Gehälter zu offerieren.
+
+Es lässt sich keine eindeutige positive Korrelation zwischen Gehalt und Betweenness-Centrality feststellen. 
+Dies impliziert, dass Unternehmen mit hoher Betweenness Centrality nicht zwangsläufig höhere Gehälter zahlen. 
+Es ist denkbar, dass andere Faktoren wie beispielsweise die Größe des Unternehmens die Höhe der Gehälter 
+stärker beeinflussen als die zentrale Position im Wettbewerbsnetzwerk.
+
+Die wenigen Unternehmen mit einer sehr hohen Betweenness Centrality könnten als strategische Vermittler im Markt auftreten und 
+dabei möglicherweise andere Vorteile nutzen, anstatt ihre Gehälter zu erhöhen. Diese Erkenntnis lässt die Hypothese zu, dass Unternehmen, 
+die über zahlreiche Verbindungen im Wettbewerbsnetzwerk verfügen, ihre Attraktivität nicht allein durch monetäre Zuwendungen, 
+sondern auch durch andere Vorteile oder Reputation aufrechterhalten könnten.
+
+
+höheres Gehalt durch spezialisierung?
 
 ### Degree-Zentralität
 Hier wird die Anzahl der Kanten gezählt, die an jedem Knoten hängen. 
@@ -729,6 +796,25 @@ kable(top_degree_df, format = "latex", booktabs = TRUE, align = "l") %>%
   kable_styling(latex_options = c("striped", "hold_position"), position = "left")
 ```
 
+```{r}
+# Zusammenhang zwischen durchschnittliches Gehalt und Degree-Zentralität
+salary_degree <- data.frame(
+  Salary = salary_data$AverageSalary,
+  Degree = degree_centrality[match(salary_data$`Company Name`, names(degree_centrality))]
+)
+
+# Scatterplot
+ggplot(salary_degree, aes(x = Salary, y = Degree)) +
+  geom_point() +
+  labs(title = "Scatterplot of Salary vs. Degree Centrality",
+       x = "Salary", y = "Degree Centrality") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    axis.title = element_text(size = 12, face = "bold"),
+    axis.text = element_text(size = 12)
+  )
+```
 
 
 
@@ -758,45 +844,132 @@ kable(top_eigenvector_df, format = "latex", booktabs = TRUE, align = "l") %>%
   kable_styling(latex_options = c("striped", "hold_position"), position = "left")
 ```
 
+```{r}
+# Zusammenhang zwischen durchschnittliches Gehalt und Eigenvector-Zentralität
+salary_eigenvector <- data.frame(
+  Salary = salary_data$AverageSalary,
+  Eigenvector = eigenvector_centrality[match(salary_data$`Company Name`, names(eigenvector_centrality))]
+)
+
+# Scatterplot
+ggplot(salary_eigenvector, aes(x = Salary, y = Eigenvector)) +
+  geom_point() +
+  labs(title = "Scatterplot of Salary vs. Eigenvector Centrality",
+       x = "Salary", y = "Eigenvector Centrality") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    axis.title = element_text(size = 12, face = "bold"),
+    axis.text = element_text(size = 12)
+  )
+```
+
+
 
 
 
 
 
 ## Cluster-Analyse
-Klassifizierung der Unternehmen:
-Unternehmen werden basierend auf ihrer Netzwerkposition in zentrale (innerhalb von Netzwerken) und periphere (am Rand der Netzwerke) Gruppen klassifiziert.
-Gehaltsvergleich:
-Verwende Boxplots oder Histogramme, um die Gehaltsverteilung in beiden Gruppen zu vergleichen.
-Beispiel: „Die Boxplots zeigen, dass die medianen Gehälter in zentralen Positionen signifikant höher sind als in peripheren Positionen.“
+Die Anwendung von Community-Detection-Methoden, wie beispielsweise Louvain oder Walktrap, ermöglicht die Identifikation von Clustern von Unternehmen, die sich durch einen besonders engen Wettbewerb auszeichnen.
 
-Abschließend soll noch eine Clusteranalyse durchgeführt werden, die die Gehalt in Bezug auf Standort und Wettbewerb kombiniert betrachtet.
-### Cluster-Analyse
-Clusteranalyse innerhalb des geografischen und Wettbewerbsnetzwerks.
-Cluster von Unternehmen nach Gehalt und Standort innerhalb des Wettbewerbsnetzwerks: Korrelation zwischen Gehältern und der Stärke von Wettbewerb und regionaler Vernetzung.
-Regionale Gehaltsklassen: Visualisierung der regionalen Gehaltsspreizung in Bezug auf Netzwerkcluster, z.B. ob Cluster in wirtschaftsstarken Regionen höhere Durchschnittsgehälter bieten.
+Im Rahmen der Klassifizierung und Visualisierung erfolgt eine farbliche Markierung der identifizierten Cluster im Netzwerk, um eine bessere Übersicht über die Wettbewerbsgruppen zu gewinnen.
+
+Im Rahmen der Untersuchung wird ermittelt, ob Cluster existieren, in denen besonders hohe oder niedrige Gehälter überwiegen, und ob diese Cluster eine gemeinsame Markt- oder Branchenstruktur aufweisen.
+### Clustering Identifikation
 ```{r}
-# Detect communities
-communities <- cluster_louvain(g_direct_competitors)
+# Louvain Community Detection
+louvain_community <- cluster_louvain(g_direct_competitors, resolution = 0.1)
+
+# Walktrap Community Detection
+walktrap_community <- cluster_walktrap(g_direct_competitors, steps = 2)
+
+# Wähle Louvain als Community-Detection-Methode
+communities <- louvain_community
+
+
+# Füge die Community-Informationen zu den Knoten des Graphen hinzu
+V(g_direct_competitors)$community <- membership(communities)
+
+# Erstelle eine Farbpalette für die Communities
+num_communities <- length(unique(V(g_direct_competitors)$community))
+if (num_communities > 12) {
+  community_colors <- colorRampPalette(brewer.pal(12, "Set3"))(num_communities)
+} else {
+  community_colors <- brewer.pal(num_communities, "Set3")
+}
+
+# Weise die Farben den Knoten basierend auf ihrer Community zu
+V(g_direct_competitors)$color <- community_colors[V(g_direct_competitors)$community]
+
+# Visualisiere das Netzwerk mit den Community-Farben
+plot(g_direct_competitors, vertex.label = NA,
+     vertex.size = 3,  # Kleinere Knoten
+     edge.width = 1 * E(g_direct_competitors)$weight,  # Reduzierte Gewichtung der Kanten
+     edge.arrow.size = 1,
+     main = "Unternehmensnetzwerk mit Community-Detection (Louvain)",
+     layout = layout_with_fr
+)
+```
+
+
+### Gehaltsunterschiede zwischen den Clustern
+```{r}
+# Untersuche die Gehälter in den verschiedenen Clustern
+community_salary <- data.frame(
+  Community = V(g_direct_competitors)$community,
+  Salary = V(g_direct_competitors)$salary
+)
+
+# Berechne das durchschnittliche Gehalt pro Community
+avg_salary_per_community <- community_salary %>%
+  group_by(Community) %>%
+  summarise(AverageSalary = mean(Salary, na.rm = TRUE))
+
+# Visualisiere die durchschnittlichen Gehälter pro Community
+ggplot(avg_salary_per_community, aes(x = factor(Community), y = AverageSalary, fill = factor(Community))) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = community_colors) +
+  labs(title = "Durchschnittliches Gehalt pro Community",
+       x = "Community",
+       y = "Durchschnittliches Gehalt") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    axis.title = element_text(size = 12, face = "bold"),
+    axis.text = element_text(size = 12),
+    legend.position = "none"
+  )
+```
+
+
+TODO "Arc Diagramm" zu den regionalen Clustern von der geografischen Netzwerkanalyse
+
+
+## Zurückbesinnen auf die geografische Analyse?
+
+
+
+
+
+
+# Abschließende Betrachtung mittels interaktiver Visualisierung 
+```{r}
+closeness_centrality <- closeness(g_direct_competitors)
+clustering_coeff <- transitivity(g_direct_competitors, type = "local")
 ```
 
 
 
-
-Vllt: bevor wir mit den Clustern loslegen
-TODO "Arc Diagramm" zu den regionalen Clustern von der geografischen Netzwerkanalyse
-
-
-## Ergänzung zu den Zentralitätsanalysen
 ```{r}
 # Prepare data for visNetwork
-nodes <- data.frame(id = V(g_direct_competitors)$name,
+'nodes <- data.frame(id = V(g_direct_competitors)$name,
                     label = V(g_direct_competitors)$name,
                     group = membership(communities),
                     value = degree_centrality,
                     title = paste("Degree:", degree_centrality, 
-                                  "<br>Betweenness:", betweenness_centrality, 
-                                  "<br>Closeness:", closeness_centrality, 
+                                  "<br>Betweenness:", betweenness_centrality,
+                                  "<br>Closeness:", closeness_centrality,
                                   "<br>Eigenvector:", eigenvector_centrality))
 
 edges <- data.frame(from = as.character(edges$from), to = as.character(edges$to))
@@ -812,29 +985,35 @@ visNetwork(nodes, edges) %>%
   visGroups(groupname = "6", color = "orange") %>%
   visGroups(groupname = "7", color = "pink") %>%
   visLayout(randomSeed = 123) %>%
-  visLegend()
+  visLegend()'
 
 
 # Fügt ein Bild der interaktiven Netzwerkvisualisierung hinzu
-knitr::include_graphics("interaktive_Netzwerke_Bilder/Übersicht.png")
+# knitr::include_graphics("interaktive_Netzwerke_Bilder/Übersicht.png")
 
-knitr::include_graphics("interaktive_Netzwerke_Bilder/NVDIA.png")
+# knitr::include_graphics("interaktive_Netzwerke_Bilder/NVDIA.png")
 
 ```
 Zugriff auf die interaktive Visualisierung über das Repository (Dateiname: network.html): https://github.com/Mzaex7/SNA 
 
 
 
+
+
+
+
+
 \newpage
 # Conclusion
-Zusammenfassung der zentralen Ergebnisse:
+Zusammenfassung der Ergebnisse:
+Fasse die zentralen Erkenntnisse zur Rolle des Wettbewerbs im Gehaltsgefüge von Data Science-Positionen zusammen, wie etwa: „Unternehmen in Clustern mit hoher Degree-Zentralität bieten im Durchschnitt 15 % höhere Gehälter als isolierte Unternehmen.“
 
-Bedeutung:
-Diskutiere, wie wichtig geografische Nähe und Wettbewerbsumfeld für die Karriereentwicklung von Data Scientists sind.
+Bedeutung der Ergebnisse:
+Diskutiere die Bedeutung der Wettbewerbsstruktur und welche Unternehmen durch ihre Position im Netzwerk von Wettbewerbsvorteilen und Talentrekrutierung profitieren.
 
-Praktische Implikationen:
-Gib Empfehlungen für Jobuchende, wie sie Standorte und Unternehmen auswählen sollten, um die besten Gehaltsaussichten zu haben.
-Dies könnte auch für Unternehmen von Interesse sein, um zu verstehen, wie sie ihre Position im Markt verbessern können.
+Praktische Empfehlungen:
+Leite Handlungsempfehlungen für Berufseinsteiger und Unternehmen ab: Wo und wie sollten Fachkräfte ihre Karrieresuche fokussieren? Welche Unternehmen sollten strategische Investitionen in Gehälter und Talentförderung in Erwägung ziehen?
+
 
 \newpage
 # Literaturverzeichnis
