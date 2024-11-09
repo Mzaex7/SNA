@@ -153,40 +153,7 @@ Science-Bereich:}
 
 \subsection{Requirements}\label{requirements}
 
-Zunächst müssen die benötigten Bibliotheken installiert werden:
-
-\begin{itemize}
-\item
-  \$ install.packages(``tidyverse'')
-\item
-  \$ install.packages(``igraph'')
-\item
-  \$ install.packages(``visNetwork'')
-\item
-  \$ install.packages(``dplyr'')
-\item
-  \$ install.packages(``tidyr'')
-\item
-  \$ install.packages(``kableExtra'')
-\item
-  \$ install.packages(``webshot'')
-\item
-  \$ install.packages(``knitr'')
-\item
-  \$ install.packages(``ggplot2'')
-\item
-  \$ install.packages(``RColorBrewer'')
-\item
-  \$ install.packages(``skimr'')
-\item
-  \$ install.packages(``htmlwidgets'')
-\item
-  \$ install.packages(``cluster'')
-\item
-  \$ install.packages(``dendextend'')
-\end{itemize}
-
-Und anschließend geladen werden:
+Zunächst müssen die benötigten Bibliotheken geladen werden:
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -202,10 +169,6 @@ Und anschließend geladen werden:
 \FunctionTok{library}\NormalTok{(RColorBrewer)}
 \FunctionTok{library}\NormalTok{(skimr)}
 \FunctionTok{library}\NormalTok{(htmlwidgets)}
-
-
-\FunctionTok{library}\NormalTok{(cluster)}
-\FunctionTok{library}\NormalTok{(dendextend)}
 \end{Highlighting}
 \end{Shaded}
 
@@ -256,16 +219,24 @@ von Geographie und Wettbewerb bei Jobangeboten und Gehältern zu geben.
 Im Rahmen der vorliegenden Arbeit wird die folgende Forschungsfrage
 bearbeitet:
 
-Inwiefern beeinflusst die geografische Nähe von Unternehmen das
-Gehaltsniveau und die Verfügbarkeit von Data-Science-Jobs? Lässt sich
-eine signifikante Variation der Einkommen innerhalb regionaler Cluster
-feststellen, und wie kann diese durch Netzwerkzentralität erklärt
-werden?
+Es soll untersucht werden, inwiefern die Position und Zentralität von
+Unternehmen im Wettbewerbsnetzwerk die Gehaltsstrukturen von
+Data-Science-Positionen beeinflusst. Zudem soll erörtert werden, welche
+Rolle die Intensität des Wettbewerbs bei der Erklärung von
+Gehaltsunterschieden spielt.
 
-Zur Beantwortung dieser Forschungsfrage soll zudem analysiert werden,
-inwiefern das Wettbewerbsumfeld zwischen Unternehmen die Gehaltsstruktur
-im Bereich Data Science beeinflusst und welche Rolle zentrale
-Unternehmen bei der Bestimmung des Gehaltsniveaus spielen.
+Dabei sollen folgende Aspekte untersucht werden:
+
+Bieten Unternehmen, die als zentrale Knoten in einem dichten
+Wettbewerbsnetzwerk agieren, tendenziell höhere Löhne an?
+
+Inwieweit beeinflusst die Clusterbildung im Netzwerk die
+Gehaltsstrukturen und gibt es spezifische Cluster, in denen höhere
+Gehälter häufiger angeboten werden?
+
+Welche Zentralitätsmaße korrelieren signifikant mit
+überdurchschnittlichen Gehältern und können Unternehmen mit bestimmten
+Netzwerkpositionen spezifische Wettbewerbsvorteile erzielen?
 
 \subsection{Datengrundlage}\label{datengrundlage}
 
@@ -279,7 +250,7 @@ orientiert.
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\NormalTok{data }\OtherTok{\textless{}{-}} \FunctionTok{read\_csv}\NormalTok{(}\StringTok{"data/Glassdoor\_DataScience\_Salary.csv"}\NormalTok{, }\AttributeTok{show\_col\_types =} \ConstantTok{FALSE}\NormalTok{)}
+\NormalTok{data }\OtherTok{\textless{}{-}} \FunctionTok{read\_csv}\NormalTok{(}\StringTok{"data/Glassdoor\_DataScience\_Salary\_modified.csv"}\NormalTok{, }\AttributeTok{show\_col\_types =} \ConstantTok{FALSE}\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
 
@@ -332,46 +303,7 @@ Der Datensatz umfasst konkret die folgenden Spalten:
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\FunctionTok{spec}\NormalTok{(data)}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{verbatim}
-## cols(
-##   `Job Title` = col_character(),
-##   `Salary Estimate` = col_double(),
-##   `Job Description` = col_character(),
-##   Rating = col_double(),
-##   `Company Name` = col_character(),
-##   Location = col_character(),
-##   Headquarters = col_character(),
-##   Size = col_character(),
-##   Founded = col_double(),
-##   `Type of ownership` = col_character(),
-##   Industry = col_character(),
-##   Sector = col_character(),
-##   Revenue = col_character(),
-##   Competitors = col_character(),
-##   Min_Salary = col_double(),
-##   Max_Salary = col_double(),
-##   State = col_character(),
-##   `Same State` = col_double(),
-##   Age = col_double(),
-##   Python_yn = col_double(),
-##   `R Studio` = col_double(),
-##   Spark = col_double(),
-##   AWS_yn = col_double(),
-##   Excel_yn = col_double(),
-##   Job_simp = col_character(),
-##   job_state = col_character(),
-##   desc_len = col_double(),
-##   Num_comp = col_double()
-## )
-\end{verbatim}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\CommentTok{\# Erstellen eine schönen Zusammenfassung des Datensatzes}
+\CommentTok{\# Erstellen einer schönen Zusammenfassung des Datensatzes}
 \FunctionTok{skim}\NormalTok{(data)}
 \end{Highlighting}
 \end{Shaded}
@@ -557,9 +489,6 @@ der Arbeit irrelevante Spalten, wie beispielsweise die Kenntnisse in
 Python, R Studio, Spark und ähnlichen Programmen, welche ursprünglich
 aus der Jobbeschreibung extrahiert wurden, entfernt.
 
-Nachdem die Daten in Python mit Hilfe von Pandas bereinigt, ergänzt und
-bearbeitet wurden, können sie nun in R eingelesen werden.
-
 Im Folgenden wird eine erste Betrachtung der Daten vorgenommen. Zu
 diesem Zweck werden die Jobs in New York nach ihren jeweiligen
 Vergütungen geordnet und in Form eines Balkendiagramms dargestellt.
@@ -594,7 +523,12 @@ Vergütungen geordnet und in Form eines Balkendiagramms dargestellt.
 \end{Shaded}
 
 \pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-5-1.pdf}}
-todo \ldots{} Insights aus dem Plot ziehen
+Es lässt sich eine signifikante Variation der Gehälter in New York
+beobachten. Zudem zeigt sich eine Korrelation zwischen Höhe des Gehalts
+und der Position: Mit steigendem Einkommen nehmen die Anzahl und der
+Rang der Senior- und Managerpositionen zu.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
 Da die Datengrundlage nicht in einem igraph-Objekt vorliegt und
 ungerichtet ist, ist es notwendig Knoten, Kanten sowie relevante
@@ -606,83 +540,63 @@ nächsten Kapitel.
 
 \section{Analysestrategie}\label{analysestrategie}
 
-\begin{enumerate}
-\def\labelenumi{\arabic{enumi}.}
-\tightlist
-\item
-  Geografisches Netzwerk
-\end{enumerate}
+Im Rahmen meiner Analyse werde ich die verschiedenen Zentralitätsmaße
+zur Untersuchung der Position und Bedeutung von Unternehmen im
+Wettbewerbsnetzwerk heranziehen. Die Anwendung dieser Maße ermöglicht
+unterschiedlicher Einblicke in die strategische Verknüpfung von
+Unternehmen im Netzwerk sowie in die potenzielle Auswirkung dieser
+Verknüpfung auf die Gehaltspolitik und Attraktivität von Unternehmen im
+Data-Science-Bereich.
 
-Das Ziel besteht in der Erstellung eines Netzwerkes, welches auf der
-räumlichen Nähe von Unternehmen basiert. Auf diese Weise soll untersucht
-werden, inwiefern regional bedingte Faktoren die Gehälter beeinflussen.
-Die Bildung von Kanten erfolgt nach dem Kriterium der räumlichen Nähe.
-Dabei werden Unternehmen, die im gleichen Ort angesiedelt sind, durch
-Kanten verbunden.
+\textbf{1. Datenaufbereitung und Netzwerkerstellung}
 
-\begin{enumerate}
-\def\labelenumi{\arabic{enumi}.}
-\setcounter{enumi}{1}
-\tightlist
-\item
-  Wettbewerbsnetzwerk
-\end{enumerate}
+In einem ersten Schritt wird ein Netzwerk aufgebaut, in dem jedes
+Unternehmen als Knoten dargestellt wird. Die Verbindungen zwischen den
+Knoten basieren auf der Spalte ``Competitors''. Dabei werden
+Unternehmen, die als Wettbewerber aufgeführt sind, durch eine Kante
+verbunden. Im nächsten Schritt erfolgt eine Aufbereitung der Daten. Dazu
+werden doppelte oder fehlerhafte Einträge entfernt sowie
+Unternehmensnamen standardisiert, um eine korrekte Kantenbildung zu
+gewährleisten.
 
-Die vorliegende Untersuchung zielt darauf ab, den Einfluss des
-Wettbewerbs auf die Gestaltung von Gehaltsstrukturen zu analysieren.
-Dazu werden die Beziehungen zwischen konkurrierenden Unternehmen als
-Netzwerk dargestellt. Die Bildung von Kanten durch Konkurrenzen erfolgt
-wie folgt: Die in der Spalte ``Competitors'' gelisteten Unternehmen
-werden als Knoten verbunden. In Bezug auf die Gewichtung sind
-verschiedene Optionen denkbar. Beispielsweise könnte die direkte
-Konkurrenz mit dem Wert ``1'' und die indirekte Konkurrenz mit dem Wert
-``0,5'' bewertet werden. Dabei würde die indirekte Konkurrenz eine
-Branche umfassen, in der das Unternehmen zwar nicht als direkter
-Konkurrent aufgeführt ist, jedoch potenziell in Konkurrenz stehen
-könnte. Im Rahmen der Netzwerkmetriken erfolgt eine Analyse der
-folgenden Aspekte: Im Rahmen der Analyse von hierarchischen Beziehungen
-und unterschiedlichen Zentralitäten erfolgt eine Untersuchung der
-Wichtigkeit eines Unternehmens im Wettbewerbsnetzwerk sowie der
-Gehaltshöhen in Relation zur Konkurrenz.
+\textbf{2. Berechnung von Netzwerkmetriken und Zentralitätsmaßen}
 
-\begin{enumerate}
-\def\labelenumi{\arabic{enumi}.}
-\setcounter{enumi}{2}
-\tightlist
-\item
-  Vergleich der Gehälter innerhalb der Netzwerke
-\end{enumerate}
+In der nächsten Phase erfolgt die Berechnung wichtiger
+Zentralitätsmetriken, welche die Bedeutung der einzelnen Unternehmen im
+Wettbewerbsnetzwerk bestimmen. Die Betweenness-Zentralität ermöglicht
+die Identifikation von Unternehmen, die eine Brückenfunktion zwischen
+anderen Unternehmen einnehmen. Diese Unternehmen sind von entscheidender
+Bedeutung für die Kommunikation und den Austausch von Informationen
+innerhalb des Netzwerkes. Die Degree-Zentralität gibt Aufschluss über
+die Anzahl direkter Wettbewerber, mit denen ein Unternehmen in Beziehung
+steht. Dies reflektiert die Wettbewerbsintensität und gibt Aufschluss
+über die Integration eines Unternehmens in das Wettbewerbsumfeld. Die
+Eigenvektor-Zentralität demonstriert die besondere Einflussnahme von
+Unternehmen, welche durch eine exzellente Vernetzung mit anderen
+zentralen Wettbewerbern gekennzeichnet ist.
 
-Im Rahmen der Analyse werden die Gehälter innerhalb der beiden Netzwerke
-miteinander verglichen. Ziel ist die Identifikation von Unternehmen, die
-zentral in einem der beiden Netzwerke liegen, und solchen, die am Rand
-oder isoliert sind, um festzustellen, ob die zentralen Unternehmen
-höhere Gehälter anbieten. Zur Durchführung des Gehaltsvergleichs werden
-Korrelationen zwischen dem Gehalt und verschiedenen Zentralitätsmaßen
-innerhalb der geografischen und wettbewerbsbezogenen Netzwerke
-herangezogen. Darüber hinaus werden Cluster-Analysen durchgeführt, um
-Unternehmen, die geografisch und wettbewerbsbedingt vernetzt sind,
-miteinander zu vergleichen.
+\textbf{3. Visualisierung und Strukturanalyse des Wettbewerbsnetzwerks}
+
+Im Folgenden erfolgt eine Anwendung von Algorithmen zur Erkennung von
+Communities, wie beispielsweise Louvain, mit dem Ziel, Cluster innerhalb
+des Netzwerks zu identifizieren. Die Analyse zielt darauf ab, natürliche
+Gruppen von Unternehmen zu identifizieren, die durch intensive
+Wettbewerbsverhältnisse gekennzeichnet sind. Des Weiteren erfolgt
+innerhalb der identifizierten Cluster eine Analyse der Gehaltsstrukturen
+sowie der Branchenzugehörigkeit, mit dem Ziel, etwaige Muster und
+Zusammenhänge zu identifizieren.
 
 \begin{enumerate}
 \def\labelenumi{\arabic{enumi}.}
 \setcounter{enumi}{3}
 \tightlist
 \item
-  Zusammenführung und Vergleich der Netzwerke
+  \textbf{Explorative Gehaltsanalyse im Netzwerk}
 \end{enumerate}
 
-Im Rahmen der Zusammenführung und des Vergleichs der Netzwerke erfolgt
-eine Gegenüberstellung der jeweiligen Strukturen, um etwaige
-Gemeinsamkeiten und Unterschiede zu identifizieren. Das Ziel dieser
-Untersuchung besteht in der Analyse der Interaktion beider Netzwerke
-sowie der Identifikation von Regionen, in denen eine besonders hohe
-Gehaltskonkurrenz zu beobachten ist. Im Rahmen des Vergleichs der
-Netzwerke hinsichtlich der Gehälter und des Wettbewerbs erfolgt zunächst
-eine Gegenüberstellung der Gehaltsverteilung in sogenannten
-``Hotspot-Regionen'' und geografisch isolierten Regionen. Darüber hinaus
-werden gemeinsame Unternehmen in beiden Netzwerken sowie die
-Gehaltsstrukturen innerhalb der Überschneidungsbereiche analysiert.
+Abschließen wird im Rahmen einer explorativen Gehaltsanalyse dem Leser
+die Möglichkeit gegeben die Gehaltsstrukturen innerhalb des Netzwerkes
+gemeinsam mit den Zentralitätsmaßen selbstständig zu erforschen.
 
 \newpage
 
@@ -695,8 +609,8 @@ Analyse}\label{bereinigung-fuxfcr-die-geografische-analyse}
 
 Bei der Durchsicht des Datensatzes viel auf, dass die Spalten ``Same
 State'' und ``job\_state'' von der Logik her ähnlich sind. Dies soll nun
-näher unterucht werden, um spätere Fehler vorzubeugen, vor allem bei den
-geografischen Netzwerken vorzubeugen.
+näher unterucht werden, um spätere Fehler, vor allem bei geografischen
+Netzwerken(siehe Anhang), vorzubeugen.
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -730,8 +644,8 @@ geografischen Netzwerken vorzubeugen.
 ## 15 MA    MA
 \end{verbatim}
 
-Sieht so aus, als wäre beide Spalten identisch. Dies soll jedoch zur
-Probe gestellt werden:
+Es scheint, dass beide Spalten identisch sind. Diesbezüglich ist jedoch
+eine Prüfung erforderlich.
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -747,7 +661,8 @@ Probe gestellt werden:
 ## [1] "Es gibt Unterschiede zwischen 'State' und 'job_state'."
 \end{verbatim}
 
-Jedoch trügt der Schein, da es Unterschiede gibt.
+Diese Annahme erweist sich jedoch als unzutreffend, da sich in der Tat
+Unterschiede feststellen lassen.
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -766,12 +681,12 @@ Jedoch trügt der Schein, da es Unterschiede gibt.
 ## 1 Los Angeles CA
 \end{verbatim}
 
-Es fällt auf, das LA und Los Angeles nicht einheitlich verwendet werden.
-Außerdem ist Los Angeles kein eigener Bundesstaat, sonder ein Teil von
-Kalifornien(CA). Dies soll nun korrigiert werden.
+Es fällt auf, dass LA und Los Angeles nicht einheitlich verwendet
+werden. Außerdem ist Los Angeles kein eigener Bundesstaat, sondern ein
+Teil von Kalifornien (CA). Dies sollte korrigiert werden.
 
-Außerdem sollte bei weieren Vorgehen beachtet werden, dass Werte wie
-``Na'' oder ``-1'' vor den Analysen entfernt werden sollten.
+Außerdem sollte bei der weiteren Vorgehensweise darauf geachtet werden,
+dass Werte wie ``Na'' oder ``-1'' vor den Auswertungen entfernt werden.
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -802,6 +717,10 @@ Außerdem sollte bei weieren Vorgehen beachtet werden, dass Werte wie
 
 \subsubsection{Überprüfung auf weitere fehlende
 Werte}\label{uxfcberpruxfcfung-auf-weitere-fehlende-werte}
+
+Im nächsten Schritt wird der Datensatz auf weitere fehlende Werte
+überprüft, um sicherzustellen, dass keine fehlerhaften Daten in die
+Analyse einfließen.
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -884,9 +803,10 @@ Werte}\label{uxfcberpruxfcfung-auf-weitere-fehlende-werte}
 ##                 0                 0                 0                 0
 \end{verbatim}
 
-Es zeigt sich, dass es nur in der Spalte ``Competitors'' relevante -1
-Werte gibt. Diese müssen nun entfernt werden. Nicht störend für diese
-Analyse sind die ``na''-Werte in der Spalte ``Job\_simp''.
+Es zeigt sich, dass lediglich in der Spalte ``Competitors'' relevante
+negative Werte zu finden sind, welche nun entfernt werden müssen. Die
+``na''-Werte in der Spalte ``Job\_simp'' hingegen haben keinen Einfluss
+auf die Analyse.
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -921,19 +841,20 @@ Analyse sind die ``na''-Werte in der Spalte ``Job\_simp''.
 \subsubsection{Entfernen irrelevanter
 Spalten}\label{entfernen-irrelevanter-spalten}
 
-Basierend auf der Analysestrategie und den geplanten Analysen werden
-jetzt noch die Spalten, die nicht für die anfängliche geografische
-Analyse und die nachfolgende Wettbewerbsanalyse benötigt werden,
-entfernt.
+In einem nächsten Schritt werden auf Basis der zuvor festgelegten
+Analysestrategie sowie der geplanten Analysen diejenigen Spalten
+identifiziert, die für die Analysen nicht erforderlich sind und
+anschließend entfernt.
 
 \begin{Shaded}
 \begin{Highlighting}[]
 \CommentTok{\# Entfernen irrelevanter Spalten}
 \CommentTok{\# Job Description, Rating, Headquarters, Size, Founded, Type of ownership, Sector, Revenue und Skills}
+
 \NormalTok{data }\OtherTok{\textless{}{-}}\NormalTok{ data }\SpecialCharTok{\%\textgreater{}\%}
   \FunctionTok{select}\NormalTok{(}\SpecialCharTok{{-}}\FunctionTok{c}\NormalTok{(}\StringTok{\textasciigrave{}}\AttributeTok{Job Description}\StringTok{\textasciigrave{}}\NormalTok{, Rating, Headquarters, Size, Founded,}
-            \StringTok{\textasciigrave{}}\AttributeTok{Type of ownership}\StringTok{\textasciigrave{}}\NormalTok{, Sector, Revenue,}
-\NormalTok{            Python\_yn, }\StringTok{\textasciigrave{}}\AttributeTok{R Studio}\StringTok{\textasciigrave{}}\NormalTok{, Spark, AWS\_yn, Excel\_yn))}
+            \StringTok{\textasciigrave{}}\AttributeTok{Type of ownership}\StringTok{\textasciigrave{}}\NormalTok{, Sector, Revenue, Python\_yn,}
+            \StringTok{\textasciigrave{}}\AttributeTok{R Studio}\StringTok{\textasciigrave{}}\NormalTok{, Spark, AWS\_yn, Excel\_yn, desc\_len, Num\_comp))}
 
 \CommentTok{\# Ausgeben der noch enthaltenen Spalten}
 \FunctionTok{print}\NormalTok{(data }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{names}\NormalTok{())}
@@ -944,11 +865,11 @@ entfernt.
 ##  [1] "Job Title"       "Salary Estimate" "Company Name"    "Location"       
 ##  [5] "Industry"        "Competitors"     "Min_Salary"      "Max_Salary"     
 ##  [9] "State"           "Same State"      "Age"             "Job_simp"       
-## [13] "job_state"       "desc_len"        "Num_comp"
+## [13] "job_state"
 \end{verbatim}
 
-\subsubsection{Bereinigung der irrelevanten
-Spalten}\label{bereinigung-der-irrelevanten-spalten}
+\subsubsection{Bereinigung irrelevanter
+Jobtitel}\label{bereinigung-irrelevanter-jobtitel}
 
 Im Rahmen dieser Arbeit erfolgt eine Analyse von Gehältern und
 Wettbewerbsbeziehungen für den Data-Science-Jobmarkt. Dabei ist zu
@@ -1126,7 +1047,7 @@ während direkte Wettbewerber in rot hervorgehoben sind.
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-16-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-15-1.pdf}}
 Es lassen sich einige interessante Beobachtungen aus dem Netzwerk
 ziehen. Einerseits sind ganz eindeutig Branchencluster zu erkennen, die
 auf die Branchenzugehörigkeit der Unternehmen hinweisen.
@@ -1231,7 +1152,7 @@ Wettbewerbsbeziehungen zu erhöhen.
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-18-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-17-1.pdf}}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -1241,7 +1162,7 @@ Wettbewerbsbeziehungen zu erhöhen.
   \FunctionTok{summarise}\NormalTok{(}\AttributeTok{AverageSalary =} \FunctionTok{mean}\NormalTok{(}\StringTok{\textasciigrave{}}\AttributeTok{Salary Estimate}\StringTok{\textasciigrave{}}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%}
   \FunctionTok{arrange}\NormalTok{(}\FunctionTok{desc}\NormalTok{(AverageSalary))}
 
-\CommentTok{\# Ausgabe aller Unternehmen zusammen mit ihren Gehältern}
+\CommentTok{\# Ausgabe der 10 Unternehmen mit den höchsten Gehältern}
 \FunctionTok{print}\NormalTok{(salary\_data, }\AttributeTok{n =} \DecValTok{10}\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
@@ -1262,8 +1183,6 @@ Wettbewerbsbeziehungen zu erhöhen.
 ## 10 Visa Inc.                         153.
 ## # i 97 more rows
 \end{verbatim}
-
-Kommentar!!!\ldots..
 
 TODO
 
@@ -1382,7 +1301,7 @@ McKinsey \& Company & 462.0000\\
 ## `geom_smooth()` using formula = 'y ~ x'
 \end{verbatim}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-21-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-20-1.pdf}}
 Der Scatterplot veranschaulicht die Korrelation zwischen dem Gehalt auf
 der x-Achse und der Betweenness Centrality auf der y-Achse. Die rote
 Linie zeigt einen nichtlinearen Trend zwischen Gehalt und Betweenness
@@ -1547,7 +1466,7 @@ Advisory Board\\
 ## `geom_smooth()` using formula = 'y ~ x'
 \end{verbatim}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-25-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-24-1.pdf}}
 Die rote Linie zeigt einen flachen Trend ohne starke Korrelation in
 diesem Scatterplot zwischen Gehalt und Degree Centrality.
 
@@ -1618,8 +1537,8 @@ Company & Eigenvector\\
 \midrule
 \cellcolor{gray!10}{PNNL} & \cellcolor{gray!10}{1.0000000}\\
 Oak Ridge National Laboratory & 0.5887841\\
-\cellcolor{gray!10}{Los Alamos National Laboratory} & \cellcolor{gray!10}{0.5887841}\\
-National Renewable Energy Lab & 0.5887841\\
+\cellcolor{gray!10}{National Renewable Energy Lab} & \cellcolor{gray!10}{0.5887841}\\
+Los Alamos National Laboratory & 0.5887841\\
 \cellcolor{gray!10}{Pacific Northwest National Laboratory} & \cellcolor{gray!10}{0.2000000}\\
 \bottomrule
 \end{tabular}
@@ -1657,7 +1576,7 @@ National Renewable Energy Lab & 0.5887841\\
 ## `geom_smooth()` using formula = 'y ~ x'
 \end{verbatim}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-27-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-26-1.pdf}}
 
 \subsection{Cluster-Analyse}\label{cluster-analyse}
 
@@ -1680,7 +1599,7 @@ Identifikation}\label{clustering-identifikation}
 \begin{Shaded}
 \begin{Highlighting}[]
 \CommentTok{\# Louvain Community Detection}
-\NormalTok{louvain\_community }\OtherTok{\textless{}{-}} \FunctionTok{cluster\_louvain}\NormalTok{(g\_direct\_competitors, }\AttributeTok{resolution =} \DecValTok{1}\NormalTok{)}
+\NormalTok{louvain\_community }\OtherTok{\textless{}{-}} \FunctionTok{cluster\_louvain}\NormalTok{(g\_direct\_competitors, }\AttributeTok{resolution =} \FloatTok{0.1}\NormalTok{)}
 
 \CommentTok{\# Walktrap Community Detection}
 \NormalTok{walktrap\_community }\OtherTok{\textless{}{-}} \FunctionTok{cluster\_walktrap}\NormalTok{(g\_direct\_competitors, }\AttributeTok{steps =} \DecValTok{2}\NormalTok{)}
@@ -1714,9 +1633,7 @@ Identifikation}\label{clustering-identifikation}
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-28-1.pdf}}
-Da das Netzwerk sehr fragmentiert ist, werden im folgenden Schritt bloß
-die 5 größten Cluster betrachtet.
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-27-1.pdf}}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -1733,9 +1650,31 @@ die 5 größten Cluster betrachtet.
   \AttributeTok{stringsAsFactors =} \ConstantTok{FALSE}
 \NormalTok{)}
 
+\CommentTok{\# Ausgeben wie viele Cluster es gibt}
+\FunctionTok{print}\NormalTok{(}\FunctionTok{paste}\NormalTok{(}\StringTok{"Anzahl der Cluster:"}\NormalTok{, }\FunctionTok{length}\NormalTok{(cluster\_info}\SpecialCharTok{$}\NormalTok{Cluster)))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "Anzahl der Cluster: 79"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Auswahl der 7 größten Cluster}
+\NormalTok{top\_clusters }\OtherTok{\textless{}{-}} \FunctionTok{head}\NormalTok{(sorted\_clusters, }\DecValTok{7}\NormalTok{)}
+
+\CommentTok{\# Ausgabe der 7 größten Cluster}
+\NormalTok{top\_clusters\_df }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}
+\AttributeTok{Cluster =} \FunctionTok{names}\NormalTok{(top\_clusters),}
+\AttributeTok{Size =} \FunctionTok{as.numeric}\NormalTok{(top\_clusters),}
+\AttributeTok{stringsAsFactors =} \ConstantTok{FALSE}
+\NormalTok{)}
+
 \CommentTok{\# Erstelle die Tabelle und zentriere sie links}
-\FunctionTok{kable}\NormalTok{(cluster\_info, }\AttributeTok{format =} \StringTok{"latex"}\NormalTok{, }\AttributeTok{booktabs =} \ConstantTok{TRUE}\NormalTok{, }\AttributeTok{align =} \StringTok{"l"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{kable\_styling}\NormalTok{(}\AttributeTok{latex\_options =} \FunctionTok{c}\NormalTok{(}\StringTok{"striped"}\NormalTok{, }\StringTok{"hold\_position"}\NormalTok{), }\AttributeTok{position =} \StringTok{"left"}\NormalTok{)}
+\FunctionTok{kable}\NormalTok{(top\_clusters\_df, }\AttributeTok{format =} \StringTok{"latex"}\NormalTok{, }\AttributeTok{booktabs =} \ConstantTok{TRUE}\NormalTok{, }\AttributeTok{align =} \StringTok{"l"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{kable\_styling}\NormalTok{(}\AttributeTok{latex\_options =} \FunctionTok{c}\NormalTok{(}\StringTok{"striped"}\NormalTok{, }\StringTok{"hold\_position"}\NormalTok{),}
+                \AttributeTok{position =} \StringTok{"left"}\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
 
@@ -1743,141 +1682,279 @@ die 5 größten Cluster betrachtet.
 \toprule
 Cluster & Size\\
 \midrule
-\cellcolor{gray!10}{1} & \cellcolor{gray!10}{23}\\
-38 & 11\\
-\cellcolor{gray!10}{12} & \cellcolor{gray!10}{10}\\
-37 & 9\\
-\cellcolor{gray!10}{5} & \cellcolor{gray!10}{8}\\
+\cellcolor{gray!10}{1} & \cellcolor{gray!10}{44}\\
+8 & 13\\
+\cellcolor{gray!10}{35} & \cellcolor{gray!10}{9}\\
+5 & 8\\
+\cellcolor{gray!10}{15} & \cellcolor{gray!10}{8}\\
 \addlinespace
-17 & 8\\
-\cellcolor{gray!10}{8} & \cellcolor{gray!10}{7}\\
-21 & 7\\
-\cellcolor{gray!10}{9} & \cellcolor{gray!10}{6}\\
-14 & 6\\
-\addlinespace
-\cellcolor{gray!10}{11} & \cellcolor{gray!10}{5}\\
-57 & 5\\
-\cellcolor{gray!10}{4} & \cellcolor{gray!10}{4}\\
-6 & 4\\
-\cellcolor{gray!10}{7} & \cellcolor{gray!10}{4}\\
-\addlinespace
-10 & 4\\
-\cellcolor{gray!10}{13} & \cellcolor{gray!10}{4}\\
-16 & 4\\
-\cellcolor{gray!10}{18} & \cellcolor{gray!10}{4}\\
-19 & 4\\
-\addlinespace
-\cellcolor{gray!10}{20} & \cellcolor{gray!10}{4}\\
-22 & 4\\
-\cellcolor{gray!10}{24} & \cellcolor{gray!10}{4}\\
-26 & 4\\
-\cellcolor{gray!10}{27} & \cellcolor{gray!10}{4}\\
-\addlinespace
-28 & 4\\
-\cellcolor{gray!10}{29} & \cellcolor{gray!10}{4}\\
-31 & 4\\
-\cellcolor{gray!10}{32} & \cellcolor{gray!10}{4}\\
-34 & 4\\
-\addlinespace
-\cellcolor{gray!10}{35} & \cellcolor{gray!10}{4}\\
-39 & 4\\
-\cellcolor{gray!10}{41} & \cellcolor{gray!10}{4}\\
-42 & 4\\
-\cellcolor{gray!10}{45} & \cellcolor{gray!10}{4}\\
-\addlinespace
-46 & 4\\
-\cellcolor{gray!10}{47} & \cellcolor{gray!10}{4}\\
-48 & 4\\
-\cellcolor{gray!10}{50} & \cellcolor{gray!10}{4}\\
-51 & 4\\
-\addlinespace
-\cellcolor{gray!10}{53} & \cellcolor{gray!10}{4}\\
-54 & 4\\
-\cellcolor{gray!10}{55} & \cellcolor{gray!10}{4}\\
-58 & 4\\
-\cellcolor{gray!10}{59} & \cellcolor{gray!10}{4}\\
-\addlinespace
-60 & 4\\
-\cellcolor{gray!10}{62} & \cellcolor{gray!10}{4}\\
-63 & 4\\
-\cellcolor{gray!10}{64} & \cellcolor{gray!10}{4}\\
-66 & 4\\
-\addlinespace
-\cellcolor{gray!10}{68} & \cellcolor{gray!10}{4}\\
-70 & 4\\
-\cellcolor{gray!10}{71} & \cellcolor{gray!10}{4}\\
-72 & 4\\
-\cellcolor{gray!10}{74} & \cellcolor{gray!10}{4}\\
-\addlinespace
-75 & 4\\
-\cellcolor{gray!10}{76} & \cellcolor{gray!10}{4}\\
-77 & 4\\
-\cellcolor{gray!10}{79} & \cellcolor{gray!10}{4}\\
-80 & 4\\
-\addlinespace
-\cellcolor{gray!10}{82} & \cellcolor{gray!10}{4}\\
-2 & 3\\
-\cellcolor{gray!10}{3} & \cellcolor{gray!10}{3}\\
-23 & 3\\
-\cellcolor{gray!10}{25} & \cellcolor{gray!10}{3}\\
-\addlinespace
-36 & 3\\
-\cellcolor{gray!10}{40} & \cellcolor{gray!10}{3}\\
-43 & 3\\
-\cellcolor{gray!10}{44} & \cellcolor{gray!10}{3}\\
-52 & 3\\
-\addlinespace
-\cellcolor{gray!10}{56} & \cellcolor{gray!10}{3}\\
-61 & 3\\
-\cellcolor{gray!10}{65} & \cellcolor{gray!10}{3}\\
-67 & 3\\
-\cellcolor{gray!10}{69} & \cellcolor{gray!10}{3}\\
-\addlinespace
-73 & 3\\
-\cellcolor{gray!10}{78} & \cellcolor{gray!10}{3}\\
-81 & 3\\
-\cellcolor{gray!10}{15} & \cellcolor{gray!10}{2}\\
-30 & 2\\
-\addlinespace
-\cellcolor{gray!10}{33} & \cellcolor{gray!10}{2}\\
-49 & 2\\
+19 & 7\\
+\cellcolor{gray!10}{12} & \cellcolor{gray!10}{6}\\
 \bottomrule
 \end{tabular}
 
-\subsubsection{Gehaltsunterschiede zwischen den
-Clustern}\label{gehaltsunterschiede-zwischen-den-clustern}
+Da das Netzwerk sehr fragmentiert ist, werden im folgenden Schritt bloß
+die 7 größten Cluster betrachtet.
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\CommentTok{\# Untersuche die Gehälter in den verschiedenen Clustern}
-\NormalTok{community\_salary }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}
-  \AttributeTok{Community =} \FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{community,}
-  \AttributeTok{Salary =} \FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{salary}
+\CommentTok{\# Berechne die Größe der Cluster}
+\NormalTok{cluster\_sizes }\OtherTok{\textless{}{-}} \FunctionTok{table}\NormalTok{(}\FunctionTok{membership}\NormalTok{(communities))}
+
+\CommentTok{\# Sortiere die Cluster nach Größe absteigend}
+\NormalTok{sorted\_clusters }\OtherTok{\textless{}{-}} \FunctionTok{sort}\NormalTok{(cluster\_sizes, }\AttributeTok{decreasing =} \ConstantTok{TRUE}\NormalTok{)}
+
+\CommentTok{\# Auswahl der 7 größten Cluster}
+\NormalTok{top\_clusters }\OtherTok{\textless{}{-}} \FunctionTok{head}\NormalTok{(sorted\_clusters, }\DecValTok{7}\NormalTok{)}
+
+\CommentTok{\# Erstelle eine Farbpalette für die Top 7 Cluster}
+\NormalTok{top\_cluster\_ids }\OtherTok{\textless{}{-}} \FunctionTok{names}\NormalTok{(top\_clusters)}
+\NormalTok{num\_top\_clusters }\OtherTok{\textless{}{-}} \FunctionTok{length}\NormalTok{(top\_cluster\_ids)}
+\NormalTok{top\_cluster\_colors }\OtherTok{\textless{}{-}} \FunctionTok{brewer.pal}\NormalTok{(}\FunctionTok{min}\NormalTok{(num\_top\_clusters, }\DecValTok{12}\NormalTok{), }\StringTok{"Set3"}\NormalTok{)}
+
+\CommentTok{\# Weise die Farben den Knoten basierend auf ihrer Zugehörigkeit zu den Top 7 Clustern zu}
+\FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{color }\OtherTok{\textless{}{-}} \FunctionTok{ifelse}\NormalTok{(}\FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{community }\SpecialCharTok{\%in\%}\NormalTok{ top\_cluster\_ids,}
+\NormalTok{                                        top\_cluster\_colors[}\FunctionTok{match}\NormalTok{(}\FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{community, top\_cluster\_ids)],}
+                                        \StringTok{"grey"}\NormalTok{)}
+
+\CommentTok{\# Visualisiere das Netzwerk mit den Community{-}Farben}
+\FunctionTok{plot}\NormalTok{(g\_direct\_competitors, }\AttributeTok{vertex.label =} \ConstantTok{NA}\NormalTok{,}
+     \AttributeTok{vertex.size =} \DecValTok{3}\NormalTok{,  }\CommentTok{\# Kleinere Knoten}
+     \AttributeTok{edge.width =} \DecValTok{1} \SpecialCharTok{*} \FunctionTok{E}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{weight,  }\CommentTok{\# Reduzierte Gewichtung der Kanten}
+     \AttributeTok{edge.arrow.size =} \DecValTok{1}\NormalTok{,}
+     \AttributeTok{layout =}\NormalTok{ layout\_with\_fr}
 \NormalTok{)}
+\FunctionTok{title}\NormalTok{(}\AttributeTok{main =} \StringTok{"Die 7 größten Cluster im Unternehmensnetzwerk"}\NormalTok{, }\AttributeTok{cex.main =} \DecValTok{2}\NormalTok{)}
 
-\CommentTok{\# Berechne das durchschnittliche Gehalt pro Community}
-\NormalTok{avg\_salary\_per\_community }\OtherTok{\textless{}{-}}\NormalTok{ community\_salary }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{group\_by}\NormalTok{(Community) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{summarise}\NormalTok{(}\AttributeTok{AverageSalary =} \FunctionTok{mean}\NormalTok{(Salary, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{))}
-
-\CommentTok{\# Visualisiere die durchschnittlichen Gehälter pro Community}
-\FunctionTok{ggplot}\NormalTok{(avg\_salary\_per\_community, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =} \FunctionTok{factor}\NormalTok{(Community), }\AttributeTok{y =}\NormalTok{ AverageSalary, }\AttributeTok{fill =} \FunctionTok{factor}\NormalTok{(Community))) }\SpecialCharTok{+}
-  \FunctionTok{geom\_bar}\NormalTok{(}\AttributeTok{stat =} \StringTok{"identity"}\NormalTok{) }\SpecialCharTok{+}
-  \FunctionTok{scale\_fill\_manual}\NormalTok{(}\AttributeTok{values =}\NormalTok{ community\_colors) }\SpecialCharTok{+}
-  \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Durchschnittliches Gehalt pro Community"}\NormalTok{,}
-       \AttributeTok{x =} \StringTok{"Community"}\NormalTok{,}
-       \AttributeTok{y =} \StringTok{"Durchschnittliches Gehalt"}\NormalTok{) }\SpecialCharTok{+}
-  \FunctionTok{theme\_minimal}\NormalTok{() }\SpecialCharTok{+}
-  \FunctionTok{theme}\NormalTok{(}
-    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{14}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
-    \AttributeTok{axis.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{12}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
-    \AttributeTok{axis.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{12}\NormalTok{),}
-    \AttributeTok{legend.position =} \StringTok{"none"}
-\NormalTok{  )}
+\CommentTok{\# Legende für Cluster{-}Farben}
+\FunctionTok{legend}\NormalTok{(}\StringTok{"topright"}\NormalTok{, }\AttributeTok{legend =} \FunctionTok{c}\NormalTok{(top\_cluster\_ids, }\StringTok{"Andere"}\NormalTok{),}
+       \AttributeTok{fill =} \FunctionTok{c}\NormalTok{(top\_cluster\_colors, }\StringTok{"grey"}\NormalTok{))}
 \end{Highlighting}
 \end{Shaded}
 
 \pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-30-1.pdf}}
+
+\subsubsection{Gehaltsunterschiede zwischen den
+Clustern}\label{gehaltsunterschiede-zwischen-den-clustern}
+
+Der Boxplot zeigt die Verteilung der Durchschnittsgehälter in den Top 7
+Clustern.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Nimmt die top\_cluster und fügt sie in ein Dataframe}
+\NormalTok{top\_clusters\_df }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}
+  \AttributeTok{Cluster =} \FunctionTok{names}\NormalTok{(top\_clusters),}
+  \AttributeTok{Size =} \FunctionTok{as.numeric}\NormalTok{(top\_clusters),}
+  \AttributeTok{stringsAsFactors =} \ConstantTok{FALSE}
+\NormalTok{)}
+
+\CommentTok{\# Erstelle eine leere Liste für die Durchschnittsgehälter der Cluster}
+\NormalTok{cluster\_salaries }\OtherTok{\textless{}{-}} \FunctionTok{list}\NormalTok{()}
+
+\CommentTok{\# Berechne die Durchschnittsgehälter für jeden Cluster}
+\ControlFlowTok{for}\NormalTok{ (cluster\_id }\ControlFlowTok{in} \FunctionTok{names}\NormalTok{(top\_clusters)) \{}
+\NormalTok{  cluster\_members }\OtherTok{\textless{}{-}} \FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{name[}\FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{community }\SpecialCharTok{==}\NormalTok{ cluster\_id]}
+\NormalTok{  cluster\_salaries[[cluster\_id]] }\OtherTok{\textless{}{-}}\NormalTok{ salary\_data}\SpecialCharTok{$}\NormalTok{AverageSalary[salary\_data}\SpecialCharTok{$}\StringTok{\textasciigrave{}}\AttributeTok{Company Name}\StringTok{\textasciigrave{}} \SpecialCharTok{\%in\%}\NormalTok{ cluster\_members]}
+\NormalTok{\}}
+
+\CommentTok{\# Erstelle ein DataFrame mit den Durchschnittsgehältern der Cluster}
+\NormalTok{cluster\_salaries\_df }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}
+  \AttributeTok{Cluster =} \FunctionTok{rep}\NormalTok{(}\FunctionTok{names}\NormalTok{(top\_clusters), }\FunctionTok{sapply}\NormalTok{(cluster\_salaries, length)),}
+  \AttributeTok{Salary =} \FunctionTok{unlist}\NormalTok{(cluster\_salaries),}
+  \AttributeTok{stringsAsFactors =} \ConstantTok{FALSE}
+\NormalTok{)}
+
+\CommentTok{\# Erstelle ein Boxplot der Gehälter nach Cluster}
+\FunctionTok{ggplot}\NormalTok{(cluster\_salaries\_df, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Cluster, }\AttributeTok{y =}\NormalTok{ Salary, }\AttributeTok{fill =}\NormalTok{ Cluster)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_boxplot}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Boxplot of Average Salaries by Cluster"}\NormalTok{,}
+       \AttributeTok{x =} \StringTok{"Cluster"}\NormalTok{, }\AttributeTok{y =} \StringTok{"Average Salary"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{theme\_minimal}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{theme}\NormalTok{(}
+    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{18}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
+    \AttributeTok{axis.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{14}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
+    \AttributeTok{axis.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{14}\NormalTok{)}
+\NormalTok{  )}
+\end{Highlighting}
+\end{Shaded}
+
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-31-1.pdf}}
+
+\subsubsection{Branchenstruktur der
+Cluster}\label{branchenstruktur-der-cluster}
+
+Die Branchenzugehörigkeit der Unternehmen in den Top 7 Clustern wird im
+folgenden Schritt untersucht, um festzustellen, ob die Cluster eine
+gemeinsame Markt- oder Branchenstruktur aufweisen.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Erstelle eine leere Liste für die Branchen der Cluster}
+\NormalTok{cluster\_industries }\OtherTok{\textless{}{-}} \FunctionTok{list}\NormalTok{()}
+
+\CommentTok{\# Extrahiere die Branchen der Unternehmen in den Clustern}
+\ControlFlowTok{for}\NormalTok{ (cluster\_id }\ControlFlowTok{in} \FunctionTok{names}\NormalTok{(top\_clusters)) \{}
+\NormalTok{  cluster\_members }\OtherTok{\textless{}{-}} \FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{name[}\FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{community }\SpecialCharTok{==}\NormalTok{ cluster\_id]}
+\NormalTok{  cluster\_industries[[cluster\_id]] }\OtherTok{\textless{}{-}}\NormalTok{ data}\SpecialCharTok{$}\NormalTok{Industry[data}\SpecialCharTok{$}\StringTok{\textasciigrave{}}\AttributeTok{Company Name}\StringTok{\textasciigrave{}} \SpecialCharTok{\%in\%}\NormalTok{ cluster\_members]}
+\NormalTok{\}}
+
+\CommentTok{\# Erstelle Tabellen für jedes Cluster}
+\ControlFlowTok{for}\NormalTok{ (cluster\_id }\ControlFlowTok{in} \FunctionTok{names}\NormalTok{(cluster\_industries)) \{}
+  \CommentTok{\# Berechne die Anzahl der einzigartigen Branchen in jedem Cluster}
+\NormalTok{  industry\_counts }\OtherTok{\textless{}{-}} \FunctionTok{as.data.frame}\NormalTok{(}\FunctionTok{table}\NormalTok{(cluster\_industries[[cluster\_id]]))}
+  \FunctionTok{colnames}\NormalTok{(industry\_counts) }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{"Industry"}\NormalTok{, }\StringTok{"Count"}\NormalTok{)}
+  
+  \CommentTok{\# Erstelle eine Tabelle für das aktuelle Cluster}
+  \FunctionTok{cat}\NormalTok{(}\FunctionTok{paste0}\NormalTok{(}\StringTok{"**Cluster "}\NormalTok{, cluster\_id, }\StringTok{"**}\SpecialCharTok{\textbackslash{}n\textbackslash{}n}\StringTok{"}\NormalTok{))}
+\NormalTok{  kable\_output }\OtherTok{\textless{}{-}} \FunctionTok{kable}\NormalTok{(industry\_counts, }\AttributeTok{format =} \StringTok{"latex"}\NormalTok{, }\AttributeTok{booktabs =} \ConstantTok{TRUE}\NormalTok{, }\AttributeTok{align =} \StringTok{"l"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{kable\_styling}\NormalTok{(}\AttributeTok{latex\_options =} \FunctionTok{c}\NormalTok{(}\StringTok{"striped"}\NormalTok{, }\StringTok{"hold\_position"}\NormalTok{), }\AttributeTok{position =} \StringTok{"left"}\NormalTok{)}
+  \FunctionTok{print}\NormalTok{(kable\_output)}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+\textbf{Cluster 1}
+
+\begin{tabular}{ll}
+\toprule
+Industry & Count\\
+\midrule
+\cellcolor{gray!10}{Aerospace \& Defense} & \cellcolor{gray!10}{2}\\
+Biotech \& Pharmaceuticals & 2\\
+\cellcolor{gray!10}{Computer Hardware \& Software} & \cellcolor{gray!10}{2}\\
+Consulting & 4\\
+\cellcolor{gray!10}{Enterprise Software \& Network Solutions} & \cellcolor{gray!10}{7}\\
+\addlinespace
+Federal Agencies & 5\\
+\cellcolor{gray!10}{IT Services} & \cellcolor{gray!10}{12}\\
+\bottomrule
+\end{tabular}
+
+\textbf{Cluster 8}
+
+\begin{tabular}{ll}
+\toprule
+Industry & Count\\
+\midrule
+\cellcolor{gray!10}{Biotech \& Pharmaceuticals} & \cellcolor{gray!10}{14}\\
+Health Care Products Manufacturing & 1\\
+\bottomrule
+\end{tabular}
+
+\textbf{Cluster 35}
+
+\begin{tabular}{ll}
+\toprule
+Industry & Count\\
+\midrule
+\cellcolor{gray!10}{Insurance Carriers} & \cellcolor{gray!10}{10}\\
+\bottomrule
+\end{tabular}
+
+\textbf{Cluster 5}
+
+\begin{tabular}{ll}
+\toprule
+Industry & Count\\
+\midrule
+\cellcolor{gray!10}{Health Care Services \& Hospitals} & \cellcolor{gray!10}{1}\\
+Insurance Carriers & 3\\
+\bottomrule
+\end{tabular}
+
+\textbf{Cluster 15}
+
+\begin{tabular}{ll}
+\toprule
+Industry & Count\\
+\midrule
+\cellcolor{gray!10}{Enterprise Software \& Network Solutions} & \cellcolor{gray!10}{2}\\
+Industrial Manufacturing & 3\\
+\bottomrule
+\end{tabular}
+
+\textbf{Cluster 19}
+
+\begin{tabular}{ll}
+\toprule
+Industry & Count\\
+\midrule
+\cellcolor{gray!10}{Advertising \& Marketing} & \cellcolor{gray!10}{1}\\
+Information Technology & 3\\
+\bottomrule
+\end{tabular}
+
+\textbf{Cluster 12}
+
+\begin{tabular}{ll}
+\toprule
+Industry & Count\\
+\midrule
+\cellcolor{gray!10}{Insurance Carriers} & \cellcolor{gray!10}{2}\\
+\bottomrule
+\end{tabular}
+
+\subsubsection{Errechnung der durchschnittlichen Gehälter pro
+Branche}\label{errechnung-der-durchschnittlichen-gehuxe4lter-pro-branche}
+
+Im folgenden Schritt wird die durchschnittliche Gehaltsstruktur pro
+Branche in den Top 7 Clustern analysiert, um festzustellen, ob bestimmte
+Branchen tendenziell höhere oder niedrigere Gehälter anbieten. Dafür
+wird die Anzahl wie of ein Unternehmen einer Branche in einem Cluster
+vorkommt berechnet und anschließend das Durchschnittsgehalt pro Branche
+ermittelt.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Lade das Paket "viridis" für eine bessere Farbpalette}
+\FunctionTok{library}\NormalTok{(viridis)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Loading required package: viridisLite
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Erstelle eine leere Liste für die Durchschnittsgehälter pro Branche}
+\NormalTok{industry\_salaries }\OtherTok{\textless{}{-}} \FunctionTok{list}\NormalTok{()}
+
+\CommentTok{\# Extrahiere die Branchen und Gehälter der Unternehmen in den Clustern}
+\ControlFlowTok{for}\NormalTok{ (cluster\_id }\ControlFlowTok{in} \FunctionTok{names}\NormalTok{(top\_clusters)) \{}
+\NormalTok{  cluster\_members }\OtherTok{\textless{}{-}} \FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{name[}\FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{community }\SpecialCharTok{==}\NormalTok{ cluster\_id]}
+\NormalTok{  cluster\_data }\OtherTok{\textless{}{-}}\NormalTok{ data[data}\SpecialCharTok{$}\StringTok{\textasciigrave{}}\AttributeTok{Company Name}\StringTok{\textasciigrave{}} \SpecialCharTok{\%in\%}\NormalTok{ cluster\_members, ]}
+  
+  \CommentTok{\# Berechne die Durchschnittsgehälter pro Branche}
+\NormalTok{  industry\_salaries[[cluster\_id]] }\OtherTok{\textless{}{-}}\NormalTok{ cluster\_data }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{group\_by}\NormalTok{(Industry) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{summarise}\NormalTok{(}\AttributeTok{AverageSalary =} \FunctionTok{mean}\NormalTok{(}\StringTok{\textasciigrave{}}\AttributeTok{Salary Estimate}\StringTok{\textasciigrave{}}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{mutate}\NormalTok{(}\AttributeTok{Cluster =}\NormalTok{ cluster\_id) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{arrange}\NormalTok{(}\FunctionTok{desc}\NormalTok{(AverageSalary))}
+\NormalTok{\}}
+
+\CommentTok{\# Kombiniere die Daten aus allen Clustern}
+\NormalTok{combined\_industry\_salaries }\OtherTok{\textless{}{-}} \FunctionTok{bind\_rows}\NormalTok{(industry\_salaries)}
+
+\CommentTok{\# Visualisiere die Durchschnittsgehälter pro Branche über alle Cluster hinweg}
+\FunctionTok{ggplot}\NormalTok{(combined\_industry\_salaries, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =} \FunctionTok{reorder}\NormalTok{(Industry, }\SpecialCharTok{{-}}\NormalTok{AverageSalary), }\AttributeTok{y =}\NormalTok{ AverageSalary, }\AttributeTok{fill =}\NormalTok{ Cluster)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_bar}\NormalTok{(}\AttributeTok{stat =} \StringTok{"identity"}\NormalTok{, }\AttributeTok{position =} \StringTok{"dodge"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{scale\_fill\_viridis\_d}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Durchschnittsgehälter nach Branche über alle Cluster hinweg"}\NormalTok{,}
+       \AttributeTok{x =} \StringTok{"Branche"}\NormalTok{, }\AttributeTok{y =} \StringTok{"Durchschnittsgehalt"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{theme\_minimal}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{theme}\NormalTok{(}
+    \AttributeTok{plot.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{18}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
+    \AttributeTok{axis.title =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{14}\NormalTok{, }\AttributeTok{face =} \StringTok{"bold"}\NormalTok{),}
+    \AttributeTok{axis.text =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{size =} \DecValTok{14}\NormalTok{),}
+    \AttributeTok{axis.text.x =} \FunctionTok{element\_text}\NormalTok{(}\AttributeTok{angle =} \DecValTok{45}\NormalTok{, }\AttributeTok{hjust =} \DecValTok{1}\NormalTok{)}
+\NormalTok{  ) }\SpecialCharTok{+}
+  \FunctionTok{coord\_flip}\NormalTok{()  }\CommentTok{\# Optional: Drehe das Diagramm für bessere Lesbarkeit}
+\end{Highlighting}
+\end{Shaded}
+
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-33-1.pdf}}
 
 \section{Abschließende Betrachtung mittels interaktiver
 Visualisierung}\label{abschlieuxdfende-betrachtung-mittels-interaktiver-visualisierung}
@@ -1896,7 +1973,7 @@ Empfehlungen dargelegt werden.
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\CommentTok{\# Prepare data for visNetwork}
+\CommentTok{\# Bereite die Daten für visNetwork vor}
 \NormalTok{nodes }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}\AttributeTok{id =} \FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{name,}
                     \AttributeTok{label =} \FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{name,}
                     \AttributeTok{group =} \FunctionTok{membership}\NormalTok{(communities),}
@@ -1904,11 +1981,18 @@ Empfehlungen dargelegt werden.
                     \AttributeTok{title =} \FunctionTok{paste}\NormalTok{(}\StringTok{"Degree:"}\NormalTok{, degree\_centrality, }
                                   \StringTok{"\textless{}br\textgreater{}Betweenness:"}\NormalTok{, betweenness\_centrality,}
                                   \StringTok{"\textless{}br\textgreater{}Closeness:"}\NormalTok{, closeness\_centrality,}
-                                  \StringTok{"\textless{}br\textgreater{}Eigenvector:"}\NormalTok{, eigenvector\_centrality))}
+                                  \StringTok{"\textless{}br\textgreater{}Eigenvector:"}\NormalTok{, eigenvector\_centrality,}
+                                  \StringTok{"\textless{}br\textgreater{}Average Salary:"}\NormalTok{, }\FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{salary),}
+                    \AttributeTok{salary =} \FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{salary)}
 
 \NormalTok{edges }\OtherTok{\textless{}{-}} \FunctionTok{data.frame}\NormalTok{(}\AttributeTok{from =} \FunctionTok{as.character}\NormalTok{(edges}\SpecialCharTok{$}\NormalTok{from), }\AttributeTok{to =} \FunctionTok{as.character}\NormalTok{(edges}\SpecialCharTok{$}\NormalTok{to))}
 
-\CommentTok{\# Create interactive network visualization}
+\CommentTok{\# Erstelle eine Farbpalette basierend auf den Gehältern mit RColorBrewer}
+\NormalTok{num\_colors }\OtherTok{\textless{}{-}} \DecValTok{9}
+\NormalTok{color\_palette }\OtherTok{\textless{}{-}} \FunctionTok{brewer.pal}\NormalTok{(num\_colors, }\StringTok{"YlOrRd"}\NormalTok{)}
+\NormalTok{nodes}\SpecialCharTok{$}\NormalTok{color }\OtherTok{\textless{}{-}}\NormalTok{ color\_palette[}\FunctionTok{cut}\NormalTok{(nodes}\SpecialCharTok{$}\NormalTok{salary, }\AttributeTok{breaks =}\NormalTok{ num\_colors, }\AttributeTok{labels =} \ConstantTok{FALSE}\NormalTok{)]}
+
+\CommentTok{\# Erstelle die interaktive Netzwerkvisualisierung}
 \NormalTok{network }\OtherTok{\textless{}{-}} \FunctionTok{visNetwork}\NormalTok{(nodes, edges) }\SpecialCharTok{\%\textgreater{}\%}
   \FunctionTok{visOptions}\NormalTok{(}\AttributeTok{highlightNearest =} \ConstantTok{TRUE}\NormalTok{, }\AttributeTok{nodesIdSelection =} \ConstantTok{TRUE}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
   \FunctionTok{visGroups}\NormalTok{(}\AttributeTok{groupname =} \StringTok{"1"}\NormalTok{, }\AttributeTok{color =} \StringTok{"red"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
@@ -1919,11 +2003,11 @@ Empfehlungen dargelegt werden.
   \FunctionTok{visGroups}\NormalTok{(}\AttributeTok{groupname =} \StringTok{"6"}\NormalTok{, }\AttributeTok{color =} \StringTok{"orange"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
   \FunctionTok{visGroups}\NormalTok{(}\AttributeTok{groupname =} \StringTok{"7"}\NormalTok{, }\AttributeTok{color =} \StringTok{"pink"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
   \FunctionTok{visLayout}\NormalTok{(}\AttributeTok{randomSeed =} \DecValTok{123}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
-  \FunctionTok{visLegend}\NormalTok{()}
+  \FunctionTok{visLegend}\NormalTok{() }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{visNodes}\NormalTok{(}\AttributeTok{color =} \FunctionTok{list}\NormalTok{(}\AttributeTok{highlight =} \StringTok{"orange"}\NormalTok{))}
 
 \CommentTok{\# Speichere die interaktive Visualisierung als HTML{-}Datei}
 \FunctionTok{saveWidget}\NormalTok{(network, }\StringTok{"network.html"}\NormalTok{, }\AttributeTok{selfcontained =} \ConstantTok{TRUE}\NormalTok{)}
-
 \CommentTok{\# Fügt ein Bild der interaktiven Netzwerkvisualisierung hinzu}
 \CommentTok{\# knitr::include\_graphics("interaktive\_Netzwerke\_Bilder/Übersicht.png")}
 
@@ -2049,7 +2133,7 @@ geändert, um die Standorte mit mehreren Unternehmen hervorzuheben.
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-33-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-36-1.pdf}}
 
 Wie zu erwarten war, sind die meisten Unternehmen in Ballungszentren wie
 New York, Chicago und San Francisco angesiedelt.
@@ -2108,7 +2192,7 @@ Regionen}\label{vergleich-der-gehuxe4lter-zwischen-den-hotspot--und-den-anderen-
 \end{Highlighting}
 \end{Shaded}
 
-\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-34-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-37-1.pdf}}
 
 \begin{Shaded}
 \begin{Highlighting}[]
