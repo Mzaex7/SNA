@@ -469,7 +469,6 @@ keinen Mehrwert für die Analyse bietet, wird diese nicht weiter verfolgt.
 Aus diesem Grund wird das Netzwerk auf direkte Wettbewerber beschränkt, um die Analyse zu vereinfachen und die Relevanz der Wettbewerbsbeziehungen zu erhöhen.
 
 ```{r, fig.width=15, fig.height=15}
-
 # Extrahiere Unternehmen und ihre Wettbewerber
 edges <- data %>%
   separate_rows(Competitors, sep = ", ") %>%
@@ -496,11 +495,17 @@ salary_data <- data %>%
 # Füge die Gehaltsdaten zu den Knoten des Graphen hinzu
 V(g_direct_competitors)$salary <- salary_data$AverageSalary[match(V(g_direct_competitors)$name, salary_data$`Company Name`)]
 
+# Setze fehlende Gehaltsdaten auf einen speziellen Wert (z.B. 0)
+V(g_direct_competitors)$salary[is.na(V(g_direct_competitors)$salary)] <- 0
+
+# Definiere die Gehaltsspektren
+salary_breaks <- c(-Inf, 50, 80, 100, 150, Inf)
+salary_labels <- c("Lowest Salary", "Low Salary", "Medium Salary", "High Salary", "Highest Salary")
+
 # Setze die Farben der Knoten basierend auf den Gehältern
-salary_quantiles <- quantile(V(g_direct_competitors)$salary, probs = seq(0, 1, length.out = 6), na.rm = TRUE)
 color_palette <- brewer.pal(5, "YlOrRd")
 V(g_direct_competitors)$color <- cut(V(g_direct_competitors)$salary, 
-                                     breaks = salary_quantiles, 
+                                     breaks = salary_breaks, 
                                      labels = FALSE, 
                                      include.lowest = TRUE)
 V(g_direct_competitors)$color <- color_palette[V(g_direct_competitors)$color]
@@ -517,9 +522,8 @@ plot(g_direct_competitors, vertex.label = NA,
 )
 title(main = "Unternehmensnetzwerk basierend auf direkten Wettbewerbern", cex.main = 2)
 
-
 # Legende für Knotenfarben
-legend("topright", legend = c("Lowest Salary", "Low Salary", "Medium Salary", "High Salary", "Highest Salary"),
+legend("topright", legend = salary_labels,
        fill = color_palette)
 
 # Ausgabe der Gehälter der Unternehmen
@@ -530,10 +534,26 @@ salary_data <- data %>%
 
 # Ausgabe der 10 Unternehmen mit den höchsten Gehältern
 print(salary_data, n = 10)
+
+# Konkrete Gehaltsspektren für die jeweilige Färbung
+print("Gehaltsspektren für die jeweilige Färbung:")
+print(salary_breaks)
 ```
 
+Das Unternehmensnetzwerk demonstriert die engen Verbindungen zwischen Unternehmen, die auf direkten Wettbewerbsbeziehungen basieren, 
+und stellt dabei die Gehälter der Unternehmen heraus. Die Farbe der Knoten variiert entsprechend den Gehaltsniveaus. 
+Dabei werden niedrige Gehälter durch hellgelb und höhere Gehälter durch rote bsi dunkelrote Farben symbolisiert.
 
-TODO
+In der rechten Mitte des Netzwerks lassen sich einige Unternehmen mit hohen Gehältern und zahlreichen Verbindungen ausmachen, 
+die eine zentrale Lage einnehmen (dunkelrot). 
+Es lässt sich vermuten, dass diese Unternehmen eine zentrale Rolle im Wettbewerbsnetzwerk einnehmen. 
+Dies könnte darauf hindeuten, dass sie dominierende Marktakteure oder wichtige Branchenführer sind.
+
+Das Netzwerk ist gekennzeichnet durch eine Vielzahl kleinerer, weniger vernetzter Unternehmenscluster, die tendenziell niedrigere Gehälter zahlen (hellere Farben). Die Präsenz peripherer Gruppen könnte darauf hinweisen, dass es sich um Nischenmärkte oder weniger stark umkämpfte Branchen handelt.
+
+Allgemein lässt sich jedoch feststellen, dass Unternehmen die sich in einer zentraleren Positionen innerhalb ihres Netzwerks befinden, 
+im Durchschnitt höhere Gehälter anbieten. 
+Dies lässt den Schluss zu, dass eine stärkere Wettbewerbsposition sowie eine höhere Attraktivität für qualifizierte Arbeitskräfte gegeben sind.
 
 ## Zentralitätsanalyse innerhalb des Netzwerkes
 
@@ -775,11 +795,20 @@ ggplot(salary_eigenvector, aes(x = Salary, y = Eigenvector)) +
     axis.text = element_text(size = 12)
   )
 ```
+Auch im Scatterplot zwischen Gehalt und Eigenvector Centrality lässt sich ein weitgehend flacher Trend beobachten, wie die rote Linie veranschaulicht. 
+Der Eigenvector Centrality-Index misst die Intensität der Verbindungen zwischen einem Unternehmen und anderen, stark vernetzten Unternehmen. 
 
+Die rote Linie verbleibt nahe dem Nullpunkt, was darauf hindeutet, dass die Eigenvector Centrality keine eindeutige Korrelation mit dem Gehalt aufweist. 
+Diese Erkenntnis lässt den Schluss zu, dass Unternehmen, die mit anderen stark vernetzten Firmen assoziiert sind, nicht zwangsläufig höhere Gehälter zahlen.
 
+Es lassen sich zwei Ausreißer identifizieren, die eine überdurchschnittlich hohe Eigenvector-Centrality-Wertigkeit aufweisen, 
+obwohl sie vergleichsweise niedrige Gehälter zahlen. Es besteht die Möglichkeit, dass diese Unternehmen in hohem Maße mit anderen gut vernetzten Firmen verbunden sind, 
+jedoch dennoch niedrigere Gehälter zahlen. Dies lässt den Schluss zu, dass die zentrale Vernetzung der Unternehmen im Wettbewerbsnetzwerk nicht ausreicht, 
+um höhere Gehälter zu rechtfertigen, oder dass sie in einem stark vernetzten, aber niedrig bezahlten Segment tätig sind.
 
-
-
+Die Analyse der Gehälter in Unternehmen mit hohen Vergütungen zeigt, dass diese sehr niedrige Werte in der Eigenvector-Centrality aufweisen. 
+Dies lässt den Schluss zu, dass hohe Gehälter eher bei Unternehmen vorkommen, die weniger stark an andere hoch vernetzte Firmen im Netzwerk gebunden sind. 
+Diese Unternehmen könnten eine besondere Marktstellung oder Spezialisierung aufweisen, welche ihnen erlaubt, hohe Gehälter zu zahlen, ohne auf enge Verbindungen zu anderen zentralen Unternehmen angewiesen zu sein.
 
 
 ## Cluster-Analyse

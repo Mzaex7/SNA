@@ -1124,11 +1124,17 @@ Wettbewerbsbeziehungen zu erhöhen.
 \CommentTok{\# Füge die Gehaltsdaten zu den Knoten des Graphen hinzu}
 \FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{salary }\OtherTok{\textless{}{-}}\NormalTok{ salary\_data}\SpecialCharTok{$}\NormalTok{AverageSalary[}\FunctionTok{match}\NormalTok{(}\FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{name, salary\_data}\SpecialCharTok{$}\StringTok{\textasciigrave{}}\AttributeTok{Company Name}\StringTok{\textasciigrave{}}\NormalTok{)]}
 
+\CommentTok{\# Setze fehlende Gehaltsdaten auf einen speziellen Wert (z.B. 0)}
+\FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{salary[}\FunctionTok{is.na}\NormalTok{(}\FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{salary)] }\OtherTok{\textless{}{-}} \DecValTok{0}
+
+\CommentTok{\# Definiere die Gehaltsspektren}
+\NormalTok{salary\_breaks }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\SpecialCharTok{{-}}\ConstantTok{Inf}\NormalTok{, }\DecValTok{50}\NormalTok{, }\DecValTok{80}\NormalTok{, }\DecValTok{100}\NormalTok{, }\DecValTok{150}\NormalTok{, }\ConstantTok{Inf}\NormalTok{)}
+\NormalTok{salary\_labels }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{"Lowest Salary"}\NormalTok{, }\StringTok{"Low Salary"}\NormalTok{, }\StringTok{"Medium Salary"}\NormalTok{, }\StringTok{"High Salary"}\NormalTok{, }\StringTok{"Highest Salary"}\NormalTok{)}
+
 \CommentTok{\# Setze die Farben der Knoten basierend auf den Gehältern}
-\NormalTok{salary\_quantiles }\OtherTok{\textless{}{-}} \FunctionTok{quantile}\NormalTok{(}\FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{salary, }\AttributeTok{probs =} \FunctionTok{seq}\NormalTok{(}\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{, }\AttributeTok{length.out =} \DecValTok{6}\NormalTok{), }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)}
 \NormalTok{color\_palette }\OtherTok{\textless{}{-}} \FunctionTok{brewer.pal}\NormalTok{(}\DecValTok{5}\NormalTok{, }\StringTok{"YlOrRd"}\NormalTok{)}
 \FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{color }\OtherTok{\textless{}{-}} \FunctionTok{cut}\NormalTok{(}\FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{salary, }
-                                     \AttributeTok{breaks =}\NormalTok{ salary\_quantiles, }
+                                     \AttributeTok{breaks =}\NormalTok{ salary\_breaks, }
                                      \AttributeTok{labels =} \ConstantTok{FALSE}\NormalTok{, }
                                      \AttributeTok{include.lowest =} \ConstantTok{TRUE}\NormalTok{)}
 \FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{color }\OtherTok{\textless{}{-}}\NormalTok{ color\_palette[}\FunctionTok{V}\NormalTok{(g\_direct\_competitors)}\SpecialCharTok{$}\NormalTok{color]}
@@ -1145,9 +1151,8 @@ Wettbewerbsbeziehungen zu erhöhen.
 \NormalTok{)}
 \FunctionTok{title}\NormalTok{(}\AttributeTok{main =} \StringTok{"Unternehmensnetzwerk basierend auf direkten Wettbewerbern"}\NormalTok{, }\AttributeTok{cex.main =} \DecValTok{2}\NormalTok{)}
 
-
 \CommentTok{\# Legende für Knotenfarben}
-\FunctionTok{legend}\NormalTok{(}\StringTok{"topright"}\NormalTok{, }\AttributeTok{legend =} \FunctionTok{c}\NormalTok{(}\StringTok{"Lowest Salary"}\NormalTok{, }\StringTok{"Low Salary"}\NormalTok{, }\StringTok{"Medium Salary"}\NormalTok{, }\StringTok{"High Salary"}\NormalTok{, }\StringTok{"Highest Salary"}\NormalTok{),}
+\FunctionTok{legend}\NormalTok{(}\StringTok{"topright"}\NormalTok{, }\AttributeTok{legend =}\NormalTok{ salary\_labels,}
        \AttributeTok{fill =}\NormalTok{ color\_palette)}
 \end{Highlighting}
 \end{Shaded}
@@ -1184,7 +1189,52 @@ Wettbewerbsbeziehungen zu erhöhen.
 ## # i 97 more rows
 \end{verbatim}
 
-TODO
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Konkrete Gehaltsspektren für die jeweilige Färbung}
+\FunctionTok{print}\NormalTok{(}\StringTok{"Gehaltsspektren für die jeweilige Färbung:"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "Gehaltsspektren für die jeweilige Färbung:"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{print}\NormalTok{(salary\_breaks)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] -Inf   50   80  100  150  Inf
+\end{verbatim}
+
+Das Unternehmensnetzwerk demonstriert die engen Verbindungen zwischen
+Unternehmen, die auf direkten Wettbewerbsbeziehungen basieren, und
+stellt dabei die Gehälter der Unternehmen heraus. Die Farbe der Knoten
+variiert entsprechend den Gehaltsniveaus. Dabei werden niedrige Gehälter
+durch hellgelb und höhere Gehälter durch rote bsi dunkelrote Farben
+symbolisiert.
+
+In der rechten Mitte des Netzwerks lassen sich einige Unternehmen mit
+hohen Gehältern und zahlreichen Verbindungen ausmachen, die eine
+zentrale Lage einnehmen (dunkelrot). Es lässt sich vermuten, dass diese
+Unternehmen eine zentrale Rolle im Wettbewerbsnetzwerk einnehmen. Dies
+könnte darauf hindeuten, dass sie dominierende Marktakteure oder
+wichtige Branchenführer sind.
+
+Das Netzwerk ist gekennzeichnet durch eine Vielzahl kleinerer, weniger
+vernetzter Unternehmenscluster, die tendenziell niedrigere Gehälter
+zahlen (hellere Farben). Die Präsenz peripherer Gruppen könnte darauf
+hinweisen, dass es sich um Nischenmärkte oder weniger stark umkämpfte
+Branchen handelt.
+
+Allgemein lässt sich jedoch feststellen, dass Unternehmen die sich in
+einer zentraleren Positionen innerhalb ihres Netzwerks befinden, im
+Durchschnitt höhere Gehälter anbieten. Dies lässt den Schluss zu, dass
+eine stärkere Wettbewerbsposition sowie eine höhere Attraktivität für
+qualifizierte Arbeitskräfte gegeben sind.
 
 \subsection{Zentralitätsanalyse innerhalb des
 Netzwerkes}\label{zentralituxe4tsanalyse-innerhalb-des-netzwerkes}
@@ -1536,8 +1586,8 @@ Anforderungen eines zentralen Wettbewerbsnetzwerks gerecht zu werden.
 Company & Eigenvector\\
 \midrule
 \cellcolor{gray!10}{PNNL} & \cellcolor{gray!10}{1.0000000}\\
-Oak Ridge National Laboratory & 0.5887841\\
-\cellcolor{gray!10}{National Renewable Energy Lab} & \cellcolor{gray!10}{0.5887841}\\
+National Renewable Energy Lab & 0.5887841\\
+\cellcolor{gray!10}{Oak Ridge National Laboratory} & \cellcolor{gray!10}{0.5887841}\\
 Los Alamos National Laboratory & 0.5887841\\
 \cellcolor{gray!10}{Pacific Northwest National Laboratory} & \cellcolor{gray!10}{0.2000000}\\
 \bottomrule
@@ -1577,6 +1627,36 @@ Los Alamos National Laboratory & 0.5887841\\
 \end{verbatim}
 
 \pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-26-1.pdf}}
+Auch im Scatterplot zwischen Gehalt und Eigenvector Centrality lässt
+sich ein weitgehend flacher Trend beobachten, wie die rote Linie
+veranschaulicht. Der Eigenvector Centrality-Index misst die Intensität
+der Verbindungen zwischen einem Unternehmen und anderen, stark
+vernetzten Unternehmen.
+
+Die rote Linie verbleibt nahe dem Nullpunkt, was darauf hindeutet, dass
+die Eigenvector Centrality keine eindeutige Korrelation mit dem Gehalt
+aufweist. Diese Erkenntnis lässt den Schluss zu, dass Unternehmen, die
+mit anderen stark vernetzten Firmen assoziiert sind, nicht zwangsläufig
+höhere Gehälter zahlen.
+
+Es lassen sich zwei Ausreißer identifizieren, die eine
+überdurchschnittlich hohe Eigenvector-Centrality-Wertigkeit aufweisen,
+obwohl sie vergleichsweise niedrige Gehälter zahlen. Es besteht die
+Möglichkeit, dass diese Unternehmen in hohem Maße mit anderen gut
+vernetzten Firmen verbunden sind, jedoch dennoch niedrigere Gehälter
+zahlen. Dies lässt den Schluss zu, dass die zentrale Vernetzung der
+Unternehmen im Wettbewerbsnetzwerk nicht ausreicht, um höhere Gehälter
+zu rechtfertigen, oder dass sie in einem stark vernetzten, aber niedrig
+bezahlten Segment tätig sind.
+
+Die Analyse der Gehälter in Unternehmen mit hohen Vergütungen zeigt,
+dass diese sehr niedrige Werte in der Eigenvector-Centrality aufweisen.
+Dies lässt den Schluss zu, dass hohe Gehälter eher bei Unternehmen
+vorkommen, die weniger stark an andere hoch vernetzte Firmen im Netzwerk
+gebunden sind. Diese Unternehmen könnten eine besondere Marktstellung
+oder Spezialisierung aufweisen, welche ihnen erlaubt, hohe Gehälter zu
+zahlen, ohne auf enge Verbindungen zu anderen zentralen Unternehmen
+angewiesen zu sein.
 
 \subsection{Cluster-Analyse}\label{cluster-analyse}
 
@@ -1768,7 +1848,7 @@ Clustern.
 \CommentTok{\# Erstelle ein Boxplot der Gehälter nach Cluster}
 \FunctionTok{ggplot}\NormalTok{(cluster\_salaries\_df, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Cluster, }\AttributeTok{y =}\NormalTok{ Salary, }\AttributeTok{fill =}\NormalTok{ Cluster)) }\SpecialCharTok{+}
   \FunctionTok{geom\_boxplot}\NormalTok{() }\SpecialCharTok{+}
-  \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Boxplot of Average Salaries by Cluster"}\NormalTok{,}
+  \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Boxplot der Durchschnittsgehälter nach Cluster"}\NormalTok{,}
        \AttributeTok{x =} \StringTok{"Cluster"}\NormalTok{, }\AttributeTok{y =} \StringTok{"Average Salary"}\NormalTok{) }\SpecialCharTok{+}
   \FunctionTok{theme\_minimal}\NormalTok{() }\SpecialCharTok{+}
   \FunctionTok{theme}\NormalTok{(}
@@ -2039,9 +2119,14 @@ Berufseinsteiger und Unternehmen ab: Wo und wie sollten Fachkräfte ihre
 Karrieresuche fokussieren? Welche Unternehmen sollten strategische
 Investitionen in Gehälter und Talentförderung in Erwägung ziehen?
 
-Ausblick: Weiterreichende Untersuchung des Zusammenhangs zwischen dem
-Einfluss von. Im Rahmen dieser Arbeit wurde bereits ein Schritt in diese
-Richtung getan(siehe Anhang)
+Ausblick: Die in dieser Arbeit präsentierten Erkenntnisse könnten durch
+weitere mögliche Einflussfaktoren wie Unternehmensgröße, Branche oder
+Standort weiter ergänzt werden. Im Rahmen dieser Arbeit wurde bereits
+ein Schritt in diese Richtung getan(siehe Anhang)
+
+Eine Erweiterung dieser Arbeit um eine Regressionsanalyse wäre ebenfalls
+denkbar, um den Einfluss der Wettbewerbsstruktur auf die Gehälter
+genauer zu quantifizieren.
 
 \newpage
 
