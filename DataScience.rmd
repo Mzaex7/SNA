@@ -212,7 +212,7 @@ die durch intensive Wettbewerbsverhältnisse gekennzeichnet sind.
 Des Weiteren erfolgt innerhalb der identifizierten Cluster eine Analyse der Gehaltsstrukturen 
 sowie der Branchenzugehörigkeit, mit dem Ziel, etwaige Muster und Zusammenhänge zu identifizieren.
 
-4. **Explorative Gehaltsanalyse im Netzwerk**
+**4. Explorative Gehaltsanalyse im Netzwerk**
 
 Abschließen wird im Rahmen einer explorativen Gehaltsanalyse dem Leser die Möglichkeit gegeben die Gehaltsstrukturen innerhalb des Netzwerkes gemeinsam mit den Zentralitätsmaßen selbstständig zu erforschen.
 
@@ -820,7 +820,7 @@ Im Rahmen der Untersuchung wird ermittelt, ob Cluster existieren, in denen beson
 
 ### Clustering Identifikation
 
-```{r, fig.width=15, fig.height=15}
+```{r, fig.width=11, fig.height=11}
 # Louvain Community Detection
 louvain_community <- cluster_louvain(g_direct_competitors, resolution = 0.1)
 
@@ -894,7 +894,7 @@ kable(top_clusters_df, format = "latex", booktabs = TRUE, align = "l") %>%
 
 Da das Netzwerk sehr fragmentiert ist, werden im folgenden Schritt bloß die 7 größten Cluster betrachtet.
 
-```{r, fig.width=15, fig.height=15}
+```{r, fig.width=11, fig.height=11}
 # Berechne die Größe der Cluster
 cluster_sizes <- table(membership(communities))
 
@@ -933,7 +933,7 @@ legend("topright", legend = c(top_cluster_ids, "Andere"),
 ### Gehaltsunterschiede zwischen den Clustern
 Der Boxplot zeigt die Verteilung der Durchschnittsgehälter in den Top 7 Clustern.
 
-```{r}
+```{r, fig.height=7}
 # Nimmt die top_cluster und fügt sie in ein Dataframe
 top_clusters_df <- data.frame(
   Cluster = names(top_clusters),
@@ -970,6 +970,31 @@ ggplot(cluster_salaries_df, aes(x = Cluster, y = Salary, fill = Cluster)) +
   )
 ```
 
+Die höchsten Gehälter werden in den Clustern 19 und 15 gezahlt. 
+Dabei weist Cluster 19 die höchsten Durchschnittsgehälter auf. 
+Die Gehaltsverteilung in Cluster 15 ist hingegen sehr heterogen, was darauf hindeutet, 
+dass in diesem Cluster sowohl hoch als auch niedrig bezahlte Positionen vertreten sind.
+
+Die Cluster 12 und 5 weisen die niedrigsten Durchschnittsgehälter auf.
+Die Gehälter in diesen Clustern sind relativ gering und weisen zudem eine geringe Variabilität auf. 
+Dies könnte auf eine homogene Struktur der Gehaltsstufen hindeuten.
+
+Die beiden Cluster 35 und Cluster 1, lassen sich dem mittleren Bereich zuordnen, 
+wobei Cluster 35 eine breite Streuung aufweist. 
+Dies lässt den Schluss zu, dass innerhalb dieses Clusters eine signifikante Varianz besteht, 
+was auf eine Mischung aus verschiedenen Unternehmensarten oder Positionen mit unterschiedlichen Gehältern hindeuten könnte.
+
+Cluster 8 weist ebenfalls einen mittleren Gehaltsbereich auf, jedoch mit einer geringeren Streuung als Cluster 35.
+Dies lässt auf eine gewisse Homogenität in den Gehaltsstrukturen innerhalb dieses Clusters schließen.
+
+Die beiden Cluster mit der breitesten Streuung (15 und 35) könnten auf heterogene Unternehmen hinweisen, 
+die in unterschiedlichen Branchen oder Positionen tätig sind und daher ein breiteres Gehaltsspektrum aufweisen.
+
+Die Analyse der Gehaltsstruktur nach Cluster offenbart eine signifikante Variation in den Gehaltsniveaus zwischen den einzelnen Clustern. 
+Cluster mit hoher Gehaltsstreuung lassen auf eine beträchtliche Diversität hinsichtlich der Unternehmensgrößen und -typen schließen, 
+während Cluster mit geringer Streuung eine höhere Homogenität aufweisen.
+
+
 
 ### Branchenstruktur der Cluster
 Die Branchenzugehörigkeit der Unternehmen in den Top 7 Clustern wird im folgenden Schritt untersucht, um festzustellen, ob die Cluster eine gemeinsame Markt- oder Branchenstruktur aufweisen.
@@ -999,8 +1024,8 @@ for (cluster_id in names(cluster_industries)) {
 ```
 
 ### Errechnung der durchschnittlichen Gehälter pro Branche
-Im folgenden Schritt wird die durchschnittliche Gehaltsstruktur pro Branche in den Top 7 Clustern analysiert, um festzustellen, ob bestimmte Branchen tendenziell höhere oder niedrigere Gehälter anbieten.
-Dafür wird die Anzahl wie of ein Unternehmen einer Branche in einem Cluster vorkommt berechnet und anschließend das Durchschnittsgehalt pro Branche ermittelt.
+Im Folgenden erfolgt eine Analyse der durchschnittlichen Gehaltsstruktur pro Branche in den Top-7-Clustern. Ziel ist die Feststellung, ob bestimmte Branchen tendenziell höhere oder niedrigere Gehälter anbieten.
+Dazu wird auf der vorhergehenden Analyse aufgebaut, um die Vertretung der verschiedenen Branchen in den Clustern und die spezifischen Gehaltsstrukturen einbeziehen zu können.
 
 ```{r, fig.height=10}
 # Lade das Paket "viridis" für eine bessere Farbpalette
@@ -1041,9 +1066,34 @@ ggplot(combined_industry_salaries, aes(x = reorder(Industry, -AverageSalary), y 
   coord_flip()  # Optional: Drehe das Diagramm für bessere Lesbarkeit
 ```
 
+**1. Branchen mit den höchsten Durchschnittsgehältern:**
+
+  - Die Bereiche **Information Technology** und **Enterprise Software & Network Solutions** gehören zu den führenden Sektoren. 
+  Innerhalb der Cluster 19 und 35 werden insbesondere in den genannten Sektoren hohe Durchschnittsgehälter erzielt.
+
+  - Auch die Branchen **Consulting** und **Advertising & Marketing** verzeichnen hohe Durchschnittsgehälter, insbesondere in dem Cluster 1.
+
+**2. Branchen mit mittleren Gehältern:**
+
+  - Die mittlere Gehaltsgruppe wird insbesondere von den Clustern 19 und 5 geprägt, 
+  wobei die Sektoren **Aerospace & Defense** sowie **Insurance Carriers** eine überproportionale Bedeutung aufweisen. 
+  Dies lässt den Schluss zu, dass die Gehälter in diesen Branchen relativ stabil sind.
+
+**3. Branchen mit niedrigeren Durchschnittsgehältern:**
+
+  - Die Branchen **Health Care Products Manufacturing** und **Industrial Manufacturing** sind durch ein geringeres Lohnniveau gekennzeichnet, insbesondere in den Clustern 8 und 12.
+
+  - Die Vergütung für **IT-Services** und **Computer-Hardware und -Software** fällt ebenfalls eher gering aus, wobei die Cluster 1 und 12 hier eine übergeordnete Rolle einnehmen.
+
+**4. Clusterverteilung nach Branchen:**
+
+  - Die Analyse der Daten zeigt, dass **Cluster 19** eine signifikante Präsenz in hochbezahlten Branchen wie Information Technology und Enterprise Software & Network Solutions aufweist. 
+  Dies lässt den Schluss zu, dass in diesen Bereichen ein hohes Gehaltspotenzial besteht.
+
+  - Die Verteilung der **Cluster 1** und **Cluster 12** in den verschiedenen Branchen ist relativ homogen, was auf ein mittleres bis niedriges Gehaltsniveau in einer Vielzahl von Sektoren hindeutet.
 
 
-
+Das vorliegende Diagramm verdeutlicht, dass bestimmte Branchen, wie beispielsweise die Informationstechnologie sowie Enterprise Software & Network Solutions, über alle Cluster hinweg mit besonders hohen Gehältern aufwarten, während andere Branchen eher auf niedrigeren Gehaltsniveaus verbleiben.
 
 
 # Abschließende Betrachtung mittels interaktiver Visualisierung 

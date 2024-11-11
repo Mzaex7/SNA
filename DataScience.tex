@@ -1586,9 +1586,9 @@ Anforderungen eines zentralen Wettbewerbsnetzwerks gerecht zu werden.
 Company & Eigenvector\\
 \midrule
 \cellcolor{gray!10}{PNNL} & \cellcolor{gray!10}{1.0000000}\\
-National Renewable Energy Lab & 0.5887841\\
-\cellcolor{gray!10}{Oak Ridge National Laboratory} & \cellcolor{gray!10}{0.5887841}\\
 Los Alamos National Laboratory & 0.5887841\\
+\cellcolor{gray!10}{Oak Ridge National Laboratory} & \cellcolor{gray!10}{0.5887841}\\
+National Renewable Energy Lab & 0.5887841\\
 \cellcolor{gray!10}{Pacific Northwest National Laboratory} & \cellcolor{gray!10}{0.2000000}\\
 \bottomrule
 \end{tabular}
@@ -1861,6 +1861,38 @@ Clustern.
 
 \pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-31-1.pdf}}
 
+Die höchsten Gehälter werden in den Clustern 19 und 15 gezahlt. Dabei
+weist Cluster 19 die höchsten Durchschnittsgehälter auf. Die
+Gehaltsverteilung in Cluster 15 ist hingegen sehr heterogen, was darauf
+hindeutet, dass in diesem Cluster sowohl hoch als auch niedrig bezahlte
+Positionen vertreten sind.
+
+Die Cluster 12 und 5 weisen die niedrigsten Durchschnittsgehälter auf.
+Die Gehälter in diesen Clustern sind relativ gering und weisen zudem
+eine geringe Variabilität auf. Dies könnte auf eine homogene Struktur
+der Gehaltsstufen hindeuten.
+
+Die beiden Cluster 35 und Cluster 1, lassen sich dem mittleren Bereich
+zuordnen, wobei Cluster 35 eine breite Streuung aufweist. Dies lässt den
+Schluss zu, dass innerhalb dieses Clusters eine signifikante Varianz
+besteht, was auf eine Mischung aus verschiedenen Unternehmensarten oder
+Positionen mit unterschiedlichen Gehältern hindeuten könnte.
+
+Cluster 8 weist ebenfalls einen mittleren Gehaltsbereich auf, jedoch mit
+einer geringeren Streuung als Cluster 35. Dies lässt auf eine gewisse
+Homogenität in den Gehaltsstrukturen innerhalb dieses Clusters
+schließen.
+
+Die beiden Cluster mit der breitesten Streuung (15 und 35) könnten auf
+heterogene Unternehmen hinweisen, die in unterschiedlichen Branchen oder
+Positionen tätig sind und daher ein breiteres Gehaltsspektrum aufweisen.
+
+Die Analyse der Gehaltsstruktur nach Cluster offenbart eine signifikante
+Variation in den Gehaltsniveaus zwischen den einzelnen Clustern. Cluster
+mit hoher Gehaltsstreuung lassen auf eine beträchtliche Diversität
+hinsichtlich der Unternehmensgrößen und -typen schließen, während
+Cluster mit geringer Streuung eine höhere Homogenität aufweisen.
+
 \subsubsection{Branchenstruktur der
 Cluster}\label{branchenstruktur-der-cluster}
 
@@ -1978,12 +2010,12 @@ Industry & Count\\
 \subsubsection{Errechnung der durchschnittlichen Gehälter pro
 Branche}\label{errechnung-der-durchschnittlichen-gehuxe4lter-pro-branche}
 
-Im folgenden Schritt wird die durchschnittliche Gehaltsstruktur pro
-Branche in den Top 7 Clustern analysiert, um festzustellen, ob bestimmte
-Branchen tendenziell höhere oder niedrigere Gehälter anbieten. Dafür
-wird die Anzahl wie of ein Unternehmen einer Branche in einem Cluster
-vorkommt berechnet und anschließend das Durchschnittsgehalt pro Branche
-ermittelt.
+Im Folgenden erfolgt eine Analyse der durchschnittlichen Gehaltsstruktur
+pro Branche in den Top-7-Clustern. Ziel ist die Feststellung, ob
+bestimmte Branchen tendenziell höhere oder niedrigere Gehälter anbieten.
+Dazu wird auf der vorhergehenden Analyse aufgebaut, um die Vertretung
+der verschiedenen Branchen in den Clustern und die spezifischen
+Gehaltsstrukturen einbeziehen zu können.
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -2035,6 +2067,66 @@ ermittelt.
 \end{Shaded}
 
 \pandocbounded{\includegraphics[keepaspectratio]{DataScience_files/figure-latex/unnamed-chunk-33-1.pdf}}
+
+\textbf{1. Branchen mit den höchsten Durchschnittsgehältern:}
+
+\begin{itemize}
+\item
+  Die Bereiche \textbf{Information Technology} und \textbf{Enterprise
+  Software \& Network Solutions} gehören zu den führenden Sektoren.
+  Innerhalb der Cluster 19 und 35 werden insbesondere in den genannten
+  Sektoren hohe Durchschnittsgehälter erzielt.
+\item
+  Auch die Branchen \textbf{Consulting} und \textbf{Advertising \&
+  Marketing} verzeichnen hohe Durchschnittsgehälter, insbesondere in dem
+  Cluster 1.
+\end{itemize}
+
+\textbf{2. Branchen mit mittleren Gehältern:}
+
+\begin{itemize}
+\tightlist
+\item
+  Die mittlere Gehaltsgruppe wird insbesondere von den Clustern 19 und 5
+  geprägt, wobei die Sektoren \textbf{Aerospace \& Defense} sowie
+  \textbf{Insurance Carriers} eine überproportionale Bedeutung
+  aufweisen. Dies lässt den Schluss zu, dass die Gehälter in diesen
+  Branchen relativ stabil sind.
+\end{itemize}
+
+\textbf{3. Branchen mit niedrigeren Durchschnittsgehältern:}
+
+\begin{itemize}
+\item
+  Die Branchen \textbf{Health Care Products Manufacturing} und
+  \textbf{Industrial Manufacturing} sind durch ein geringeres Lohnniveau
+  gekennzeichnet, insbesondere in den Clustern 8 und 12.
+\item
+  Die Vergütung für \textbf{IT-Services} und \textbf{Computer-Hardware
+  und -Software} fällt ebenfalls eher gering aus, wobei die Cluster 1
+  und 12 hier eine übergeordnete Rolle einnehmen.
+\end{itemize}
+
+\textbf{4. Clusterverteilung nach Branchen:}
+
+\begin{itemize}
+\item
+  Die Analyse der Daten zeigt, dass \textbf{Cluster 19} eine
+  signifikante Präsenz in hochbezahlten Branchen wie Information
+  Technology und Enterprise Software \& Network Solutions aufweist. Dies
+  lässt den Schluss zu, dass in diesen Bereichen ein hohes
+  Gehaltspotenzial besteht.
+\item
+  Die Verteilung der \textbf{Cluster 1} und \textbf{Cluster 12} in den
+  verschiedenen Branchen ist relativ homogen, was auf ein mittleres bis
+  niedriges Gehaltsniveau in einer Vielzahl von Sektoren hindeutet.
+\end{itemize}
+
+Das vorliegende Diagramm verdeutlicht, dass bestimmte Branchen, wie
+beispielsweise die Informationstechnologie sowie Enterprise Software \&
+Network Solutions, über alle Cluster hinweg mit besonders hohen
+Gehältern aufwarten, während andere Branchen eher auf niedrigeren
+Gehaltsniveaus verbleiben.
 
 \section{Abschließende Betrachtung mittels interaktiver
 Visualisierung}\label{abschlieuxdfende-betrachtung-mittels-interaktiver-visualisierung}
