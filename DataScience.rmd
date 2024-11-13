@@ -1160,11 +1160,6 @@ Das vorliegende Diagramm verdeutlicht, dass bestimmte Branchen, wie beispielswei
 Im Folgenden wird dem Leser eine interaktive Visualisierung präsentiert, welche ihm die Möglichkeit bietet, die Ergebnisse der Wettbewerbsanalyse eigenständig zu explorieren, bevor die Schlussfolgerungen und Empfehlungen dargelegt werden.
 $\\$
 ```{r}
-closeness_centrality <- closeness(g_direct_competitors)
-clustering_coeff <- transitivity(g_direct_competitors, type = "local")
-```
-
-```{r}
 # Bereite die Daten für visNetwork vor
 nodes <- data.frame(id = V(g_direct_competitors)$name,
                     label = V(g_direct_competitors)$name,
@@ -1172,7 +1167,6 @@ nodes <- data.frame(id = V(g_direct_competitors)$name,
                     value = degree_centrality,
                     title = paste("Degree:", degree_centrality, 
                                   "<br>Betweenness:", betweenness_centrality,
-                                  "<br>Closeness:", closeness_centrality,
                                   "<br>Eigenvector:", eigenvector_centrality,
                                   "<br>Average Salary:", V(g_direct_competitors)$salary),
                     salary = V(g_direct_competitors)$salary)
@@ -1200,10 +1194,11 @@ network <- visNetwork(nodes, edges) %>%
 
 # Speichere die interaktive Visualisierung als HTML-Datei
 saveWidget(network, "network.html", selfcontained = TRUE)
-# Fügt ein Bild der interaktiven Netzwerkvisualisierung hinzu
-# knitr::include_graphics("interaktive_Netzwerke_Bilder/Übersicht.png")
 
-# knitr::include_graphics("interaktive_Netzwerke_Bilder/NVDIA.png")
+# Fügt ein Bild der interaktiven Netzwerkvisualisierung hinzu
+knitr::include_graphics("interaktive_Netzwerke_Bilder/Übersicht.png")
+
+knitr::include_graphics("interaktive_Netzwerke_Bilder/Deloitte.png")
 
 ```
 
@@ -1219,30 +1214,28 @@ Die Ausführung des Codes resultiert in der Speicherung der interaktiven Visuali
 # Conclusion
 Zusammenfassend zeigen die Ergebnisse dieser Arbeit überraschenderweise wenig Zusammenhang zwischen der Wettbewerbsstruktur und den Gehältern von Data Science-Positionen.
 Jedoch konnte trotzdem eine Vielzahl von Erkenntnissen gewonnen werden, die die Rolle des Wettbewerbs im Gehaltsgefüge von Data Science-Positionen beleuchten.
-
+$\\$
 Einerseits zeigte die initielle Netzwerkanalyse der direkten Wettbewerber auf, dass Unternehmen die im Mittelpunt der Wettbewerbsbeziehungen verschieder Unternehmen stehen
 durchaus höhere Gehälter zahlen. Dies zeigte sich vorallem bei erster Betrachtung, der Eindruck konnte jedoch durch analyse der Zentralitätsmaße nicht vollends bestätigt werden.
 Ausschließlich die Betweenness Centrality und Degree Centrality zeigten einen leichten Zusammenhang mit den Gehältern, wobei die Eigenvector Centrality keinen signifikanten Einfluss auf die Gehälter hatte.
-
-Ein Blick auf die Clusteranalyse offenbarte eine signifikante Varianz der Gehälter zwischen den Clustern.
+$\\$
+Die Clusteranalyse ergab eine signifikante Varianz der Gehälter zwischen den Clustern.
+Die Cluster 1, 8, 35, 5, 15, 19, 12 erwiesen sich als die größten Cluster, wobei Cluster 19 die höchsten Durchschnittsgehälter aufwies.
 Dabei entpuppten sich die Branchen Informationstechnologie und Enterprise Software & Network Solutions in den zentralen Clustern als besonders lukrativ, während andere Branchen eher niedrigere Gehälter aufwiesen.
-
-
+$\\$
 Insgesamt lässt sich festhalten, dass das Wettbewerbsumfeld und die Netzwerkposition zwar ein entscheidender Faktor für die Gehaltsstruktur im Data Science-Bereich ist, es jedoch sehr wahrscheinlich ist, dass andere Einflussfaktoren
 eine ähnliche oder sogar größere Rolle spielen könnten.
 
-Bedeutung der Ergebnisse:
-Diskutiere die Bedeutung der Wettbewerbsstruktur und welche Unternehmen durch ihre Position im Netzwerk von Wettbewerbsvorteilen und Talentrekrutierung profitieren.
 
-Praktische Empfehlungen:
-Leite Handlungsempfehlungen für Berufseinsteiger und Unternehmen ab: Wo und wie sollten Fachkräfte ihre Karrieresuche fokussieren? Welche Unternehmen sollten strategische Investitionen in Gehälter und Talentförderung in Erwägung ziehen?
-
-Ausblick:
-Die in dieser Arbeit präsentierten Erkenntnisse könnten durch weitere mögliche Einflussfaktoren wie Unternehmensgröße, Branche oder Standort weiter ergänzt werden.
-Im Rahmen dieser Arbeit wurde bereits ein Schritt in diese Richtung getan(siehe Anhang)
-
-Eine Erweiterung dieser Arbeit um eine Regressionsanalyse wäre ebenfalls denkbar, um den Einfluss der Wettbewerbsstruktur auf die Gehälter genauer zu quantifizieren.
-
+Die in dieser Arbeit gewonnenen Erkenntnisse bieten Ansatzpunkte für weiterführende Untersuchungen. 
+Eine naheliegende Erweiterung wäre die Einbeziehung zusätzlicher Einflussfaktoren wie Unternehmensgröße, Branche oder Standort, um ein noch differenzierteres Bild des Zusammenhangs zwischen Wettbewerbsstruktur und Lohnniveau zu erhalten. 
+Ein erster Schritt in diese Richtung wurde im Rahmen dieser Arbeit bereits unternommen (siehe Anhang).
+$\\$
+Eine weitere Möglichkeit wäre die Durchführung einer Regressionsanalyse, um den Einfluss der Wettbewerbsstruktur auf die Gehälter quantitativ genauer zu erfassen. 
+Dies könnte zu einem besseren Verständnis der Auswirkungen verschiedener Wettbewerbsfaktoren auf die Vergütung im Bereich Data Science beitragen.
+$\\$
+Darüber hinaus wäre es denkbar, aus den Ergebnissen dieser Arbeit konkrete Handlungsempfehlungen für Unternehmen oder Arbeitnehmer abzuleiten, um ihnen eine Orientierung im Wettbewerb um Talente im Bereich Data Science zu geben. 
+Dies würde jedoch den Rahmen dieser Arbeit sprengen und könnte als eigenständiges Forschungsprojekt verfolgt werden.
 
 
 
