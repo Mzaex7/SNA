@@ -176,22 +176,39 @@ Zunächst müssen die benötigten Bibliotheken geladen werden:
 \subsection{Motivation und
 Zielsetzung}\label{motivation-und-zielsetzung}
 
-In ihrem Artikel ``Data Scientist: The Sexiest Job of the 21st Century''
-betonen Davenport und Patil, dass Data Scientists durch ihre Fähigkeiten
-in Informatik, Statistik und ihr Fachwissen allgemein einen erheblichen
-Mehrwert für Unternehmen schaffen.\footnote{Davenport, Patil 2012} Die
-Fähigkeit, aus komplexen, unstrukturierten Daten wertvolle Erkenntnisse
-zu gewinnen, macht Data Scientisten in vielen Branchen zu einer
-unverzichtbaren Ressource.\footnote{Davenport, Patil 2012} Die Nutzung
-ihrer Kompetenzen verschafft Unternehmen einen Wettbewerbsvorteil, da
-sie datengetriebene Entscheidungen, Produktinnovationen und
-Effizienzsteigerungen ermöglicht.\footnote{Davenport, Patil 2012} \(\\\)
-Darüber ob Data Scientists immer noch the ``Sexiest Job'' des 21.
-Jahrhunderts sind, lässt sich streiten. Fakt ist jedoch, dass die
-Nachfrage nach Data Scientists in den letzten Jahren stark gestiegen ist
-und vorraussichtlich immer weiter steigen wird. Dieser Trend ist auch in
-den Google-Suchanfragen zu den Begriffen erkenntlich:\footnote{Google
-  Trends, abgerufen am 30.10.2024}
+Die fortschreitende Digitalisierung sowie der kontinuierlich steigende
+Einsatz datengetriebener Technologien haben in den vergangenen Jahren zu
+einer exponentiellen Zunahme an Daten geführt. Es ist daher nicht
+verwunderlich, dass die Aussage ``Data is the new Oil'', die auf einen
+Artikel im Economist aus dem Jahr 2017 zurückgeht\footnote{Vgl. The
+  Economist, „The world`s most valuable resource is no longer oil, but
+  data`` 2017} , zunehmend an Resonanz gewinnt. Es wird prognostiziert,
+dass die weltweite Datenmenge von 33 Zettabytes im Jahr 2018 auf 175
+Zettabytes im Jahr 2025 anwachsen wird\footnote{Vgl. Rydning 2018, S. 3}
+, was einem exponentiellen Wachstum entspricht.\footnote{Vgl. Mahanti
+  2021, S. 6} Die Herausforderung für Unternehmen besteht folglich
+darin, diese Datenmengen effizient zu verwalten, um auf dieser Grundlage
+fundierte Entscheidungen treffen zu können. Mit dem Aufkommen von Data
+Science als eigenständiger Disziplin und der Etablierung des
+Berufsbildes „Data Scientist`` wird das Potenzial der Datenanalyse in
+unterschiedlichen Bereichen zunehmend erkannt.\footnote{Vgl.
+  Stockinger/Stadelmann/Ruckstuhl 2016, S. 60} \(\\\) In ihrem Artikel
+``Data Scientist: The Sexiest Job of the 21st Century'' betonen
+Davenport und Patil, dass Data Scientists durch ihre Fähigkeiten in
+Informatik, Statistik und ihr Fachwissen allgemein einen erheblichen
+Mehrwert für Unternehmen schaffen.\footnote{Vgl. Davenport/Patil 2012}
+Die Fähigkeit, aus komplexen, unstrukturierten Daten wertvolle
+Erkenntnisse zu gewinnen, macht Data Scientisten in vielen Branchen zu
+einer unverzichtbaren Ressource.\footnote{Vgl. Davenport/Patil 2012} Die
+Nutzung ihrer Kompetenzen verschafft Unternehmen einen
+Wettbewerbsvorteil, da sie datengetriebene Entscheidungen,
+Produktinnovationen und Effizienzsteigerungen ermöglicht.\footnote{Vgl.
+  Davenport/Patil 2012} \(\\\) Darüber ob das Berufsbild Data Scientist
+immer noch the ``Sexiest Job'' des 21. Jahrhunderts ist, lässt sich
+streiten. Fakt ist jedoch, dass die Nachfrage nach Data Scientists in
+den letzten Jahren stark gestiegen ist und vorraussichtlich immer weiter
+steigen wird. Dieser Trend ist auch in den Google-Suchanfragen zu den
+Begriffen erkenntlich:\footnote{Google Trends, abgerufen am 30.10.2024}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -1584,9 +1601,9 @@ Anforderungen eines zentralen Wettbewerbsnetzwerks gerecht zu werden.
 Company & Eigenvector\\
 \midrule
 \cellcolor{gray!10}{PNNL} & \cellcolor{gray!10}{1.0000000}\\
+National Renewable Energy Lab & 0.5887841\\
+\cellcolor{gray!10}{Los Alamos National Laboratory} & \cellcolor{gray!10}{0.5887841}\\
 Oak Ridge National Laboratory & 0.5887841\\
-\cellcolor{gray!10}{National Renewable Energy Lab} & \cellcolor{gray!10}{0.5887841}\\
-Los Alamos National Laboratory & 0.5887841\\
 \cellcolor{gray!10}{Pacific Northwest National Laboratory} & \cellcolor{gray!10}{0.2000000}\\
 \bottomrule
 \end{tabular}
@@ -2231,11 +2248,33 @@ untersuchen.
 
 \section{Conclusion}\label{conclusion}
 
-Zusammenfassung der Ergebnisse: Fasse die zentralen Erkenntnisse zur
-Rolle des Wettbewerbs im Gehaltsgefüge von Data Science-Positionen
-zusammen, wie etwa: „Unternehmen in Clustern mit hoher
-Degree-Zentralität bieten im Durchschnitt 15 \% höhere Gehälter als
-isolierte Unternehmen.``
+Zusammenfassend zeigen die Ergebnisse dieser Arbeit überraschenderweise
+wenig Zusammenhang zwischen der Wettbewerbsstruktur und den Gehältern
+von Data Science-Positionen. Jedoch konnte trotzdem eine Vielzahl von
+Erkenntnissen gewonnen werden, die die Rolle des Wettbewerbs im
+Gehaltsgefüge von Data Science-Positionen beleuchten.
+
+Einerseits zeigte die initielle Netzwerkanalyse der direkten
+Wettbewerber auf, dass Unternehmen die im Mittelpunt der
+Wettbewerbsbeziehungen verschieder Unternehmen stehen durchaus höhere
+Gehälter zahlen. Dies zeigte sich vorallem bei erster Betrachtung, der
+Eindruck konnte jedoch durch analyse der Zentralitätsmaße nicht vollends
+bestätigt werden. Ausschließlich die Betweenness Centrality und Degree
+Centrality zeigten einen leichten Zusammenhang mit den Gehältern, wobei
+die Eigenvector Centrality keinen signifikanten Einfluss auf die
+Gehälter hatte.
+
+Ein Blick auf die Clusteranalyse offenbarte eine signifikante Varianz
+der Gehälter zwischen den Clustern. Dabei entpuppten sich die Branchen
+Informationstechnologie und Enterprise Software \& Network Solutions in
+den zentralen Clustern als besonders lukrativ, während andere Branchen
+eher niedrigere Gehälter aufwiesen.
+
+Insgesamt lässt sich festhalten, dass das Wettbewerbsumfeld und die
+Netzwerkposition zwar ein entscheidender Faktor für die Gehaltsstruktur
+im Data Science-Bereich ist, es jedoch sehr wahrscheinlich ist, dass
+andere Einflussfaktoren eine ähnliche oder sogar größere Rolle spielen
+könnten.
 
 Bedeutung der Ergebnisse: Diskutiere die Bedeutung der
 Wettbewerbsstruktur und welche Unternehmen durch ihre Position im
@@ -2463,6 +2502,23 @@ Job of the 21st Century«, in Harvard Business Review vom 1. Oktober
 Google Trends,
 \url{https://trends.google.com/trends/explore?date=all&q=\%22data\%20science\%22,\%22data\%20scientist\%22}
 (Zugriff vom 30.10.2024).
+
+Mahanti, Rupa 2021. »Data and Its Governance«, in Data Governance and
+Data Management: Contextualizing Data Governance Drivers, Technologies,
+and Tools, hrsg. v. Mahanti, Rupa, S. 5--82. Singapore: Springer.
+
+Rydning, David Reinsel--John Gantz--John 2018. »The Digitization of the
+World From Edge to Core«.
+
+Stockinger, Kurt; Stadelmann, Thilo; Ruckstuhl, Andreas 2016. »Data
+Scientist als Beruf«, in Big Data: Grundlagen, Systeme und
+Nutzungspotenziale, hrsg. v. Fasel, Daniel; Meier, Andreas, S. 59-61.
+Wiesbaden: Springer Fachmedien.
+
+»The world's most valuable resource is no longer oil, but data«, in The
+Economist vom 6. Mai 2017.
+\url{https://www.economist.com/leaders/2017/05/06/the-worlds-most-valuable-resource-is-no-longer-oil-but-data}
+(Zugriff vom 11.13.2024).
 
 \includepdf[pages=-]{KI_Selbstständigkeit.pdf}
 
